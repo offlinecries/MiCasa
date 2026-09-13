@@ -266,7 +266,11 @@
   position: relative;
   width: 100%;
   max-width: 1100px;
-  min-height: 66vh;
+  /* lienzo grande a propósito: mucho más alto que la cámara + las
+     fotos actuales, con aire de sobra hacia abajo para que la
+     distribución libre no quede apretada alrededor de la cámara y
+     para dejar lugar a contenido futuro debajo de esta sección */
+  min-height: 150vh;
   margin: 0 auto;
 }
 
@@ -515,6 +519,11 @@
 @media (max-width: 720px) {
   .deja-tu-foto { padding: 9vh 6vw 12vh 6vw; }
   .dtf-title { font-size: 1.9rem; }
-  .dtf-collection { min-height: 74vh; }
-  .dtf-window { width: 78vw; }
+  .dtf-collection { min-height: 130vh; }
+  /* % del espacio (no vw): "vw" es relativo a toda la pantalla, pero
+     la posición de cada ventana es relativa al propio contenedor
+     (que ya está inset por el padding lateral de la sección) — con
+     vw, una foto cerca del borde derecho terminaba saliéndose de la
+     pantalla */
+  .dtf-window { width: 78%; }
 }

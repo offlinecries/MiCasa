@@ -272,12 +272,19 @@
     function pickInitialPosition() {
       var rect = collection.getBoundingClientRect();
       var scale = round2(0.94 + Math.random() * 0.12); // entre 0.94 y 1.06
+      // el ancho real de una ventana de foto (CSS) es distinto en
+      // mobile (78% del propio contenedor) que en desktop (230px fijo,
+      // con un tope de 78vw que rara vez llega a aplicar) — hay que
+      // estimarlo igual que lo hace el CSS o el clamp queda corto y
+      // las fotos terminan saliéndose del espacio
+      var isMobileWidth = window.innerWidth <= 720;
+      var baseItemW = isMobileWidth ? rect.width * 0.78 : Math.min(230, rect.width * 0.78);
       // +4px de margen de seguridad: la estimación no puede medir el
       // borde/sombra reales antes de crear la ventana. Se multiplica
       // por la escala porque "scale" agranda la ventana visualmente
       // desde su esquina (transform-origin: top left en el CSS), así
       // que el espacio real que ocupa es más grande que su ancho base
-      var itemW = (Math.min(230, rect.width * 0.78) + 4) * scale;
+      var itemW = (baseItemW + 4) * scale;
       var itemH = itemW * 0.92;
       var itemWPct = itemW / rect.width * 100;
       var itemHPct = itemH / rect.height * 100;
