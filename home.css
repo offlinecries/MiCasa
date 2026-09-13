@@ -303,9 +303,17 @@
   }
 }
 
-/* en PC la cámara se ve más grande que las fotitas guardadas */
+/* la cámara tiene mucha más presencia que las fotitas guardadas: en PC
+   un ancho fijo grande (el max-width:78vw heredado ya la protege en
+   viewports angostos), en mobile un % del espacio —no vw, para no
+   desbordar el padding lateral de la sección— */
 @media (min-width: 721px) {
-  .dtf-window--camera { width: 340px; }
+  .dtf-window.dtf-window--camera { width: 620px; }
+}
+@media (max-width: 720px) {
+  /* especificidad de 2 clases a propósito: tiene que ganarle a la
+     regla ".dtf-window { width: 78vw; }" de más abajo */
+  .dtf-window.dtf-window--camera { width: 94%; max-width: 94%; }
 }
 
 .dtf-window.is-dragging {
@@ -377,6 +385,10 @@
   image-rendering: -moz-crisp-edges;
   border: 1px solid #1C1C1A;
   cursor: inherit;
+  /* fijado también por CSS (camera-fx.js ya lo hace por JS): así el
+     navegador nunca interpreta el primer tap como gesto de scroll,
+     sin depender del timing de ejecución del script */
+  touch-action: none;
 }
 #dtfDisplay[hidden] { display: none; }
 
