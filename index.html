@@ -244,44 +244,155 @@
       startFeed();
     });
 
-    var lastTileRotation = 0;
-    function nextRotation() {
-      // alterna el ángulo para que no dos fotos seguidas roten igual
-      var options = [-3, 2, -1.5, 3, -2.5, 1.5];
-      lastTileRotation = (lastTileRotation + 1) % options.length;
-      return options[lastTileRotation];
+    // ---------- posiciones libres: cada foto vive en un punto propio
+    // (x/y en % del espacio, rotación y escala propias) que se guarda
+    // en Supabase y se comparte entre visitantes. El pequeño movimiento
+    // "vivo" de cada ventana es aparte: solo visual, local, nunca se
+    // guarda (ver applyFloatBehavior) ----------
+    var knownPositions = []; // [{id, x, y}] — para no amontonar fotos nuevas sobre otras
+
+    function round2(n) { return Math.round(n * 100) / 100; }
+
+    function clampPercent(valuePct, itemPx, containerPx) {
+      if (!containerPx) return 0;
+      var itemPct = itemPx / containerPx * 100;
+      var maxPct = Math.max(0, 100 - itemPct);
+      return Math.min(Math.max(0, valuePct), maxPct);
     }
 
-    // ---------- arrastrar ventanas dentro del espacio (solo en PC —
-    // en mobile el orden se mantiene simple, sin drag) ----------
-    var collectionHeightLocked = false;
+    function updateKnownPosition(id, x, y) {
+      var found = knownPositions.filter(function (p) { return p.id === id; })[0];
+      if (found) { found.x = x; found.y = y; }
+      else knownPositions.push({ id: id, x: x, y: y });
+    }
 
+    // posición inicial orgánica: prueba unos candidatos al azar y se
+    // queda con el que quede más lejos de las fotos que ya existen, sin
+    // buscar una separación perfecta (alcanza con que no queden pegadas)
+    function pickInitialPosition() {
+      var rect = collection.getBoundingClientRect();
+      var scale = round2(0.94 + Math.random() * 0.12); // entre 0.94 y 1.06
+      // +4px de margen de seguridad: la estimación no puede medir el
+      // borde/sombra reales antes de crear la ventana. Se multiplica
+      // por la escala porque "scale" agranda la ventana visualmente
+      // desde su esquina (transform-origin: top left en el CSS), así
+      // que el espacio real que ocupa es más grande que su ancho base
+      var itemW = (Math.min(230, rect.width * 0.78) + 4) * scale;
+      var itemH = itemW * 0.92;
+      var itemWPct = itemW / rect.width * 100;
+      var itemHPct = itemH / rect.height * 100;
+
+      // nunca tapar la cámara (dura, no es solo una preferencia): se
+      // calcula su caja actual —aunque la hayan arrastrado a otro
+      // lado— con un margen alrededor
+      var camBox = null;
+      var camEl = collection.querySelector('.dtf-window--camera');
+      if (camEl) {
+        var camRect = camEl.getBoundingClientRect();
+        var pad = 4;
+        camBox = {
+          left: (camRect.left - rect.left) / rect.width * 100 - pad,
+          top: (camRect.top - rect.top) / rect.height * 100 - pad,
+          right: (camRect.right - rect.left) / rect.width * 100 + pad,
+          bottom: (camRect.bottom - rect.top) / rect.height * 100 + pad
+        };
+      }
+      function overlapsCamera(x, y) {
+        if (!camBox) return false;
+        return x < camBox.right && x + itemWPct > camBox.left && y < camBox.bottom && y + itemHPct > camBox.top;
+      }
+
+      // entre las candidatas que no tapan la cámara, preferir la que
+      // quede más lejos de las fotos que ya existen (sin buscar una
+      // separación perfecta: alcanza con que no queden pegadas)
+      var best = null, bestDist = -1;
+      for (var attempt = 0; attempt < 20; attempt++) {
+        var xPct = clampPercent(Math.random() * 100, itemW, rect.width);
+        var yPct = clampPercent(Math.random() * 100, itemH, rect.height);
+        if (overlapsCamera(xPct, yPct)) continue;
+
+        if (knownPositions.length === 0) { best = { x: xPct, y: yPct }; break; }
+
+        var minDist = Infinity;
+        knownPositions.forEach(function (p) {
+          var dx = p.x - xPct, dy = p.y - yPct;
+          var d = Math.sqrt(dx * dx + dy * dy);
+          if (d < minDist) minDist = d;
+        });
+        if (minDist > bestDist) { bestDist = minDist; best = { x: xPct, y: yPct }; }
+        if (minDist > 18) break; // ya está suficientemente lejos de las demás
+      }
+
+      // espacio muy chico y los 20 intentos cayeron sobre la cámara:
+      // como último recurso, ubicarla justo debajo
+      if (!best) {
+        best = {
+          x: clampPercent(0, itemW, rect.width),
+          y: clampPercent(camBox ? camBox.bottom : 0, itemH, rect.height)
+        };
+      }
+
+      return {
+        x: round2(best.x),
+        y: round2(best.y),
+        rotation: round2(Math.random() * 14 - 7), // entre -7 y 7 grados
+        scale: scale
+      };
+    }
+
+    // movimiento ambiental: 4 "personalidades" posibles, bien sutiles,
+    // que no se guardan en ningún lado — se re-eligen cada vez que la
+    // foto se dibuja en pantalla
+    function applyFloatBehavior(tile) {
+      var kind = Math.floor(Math.random() * 4);
+      var dx = 0, dy = 0, drot = 0, dur = 9 + Math.random() * 5;
+
+      if (kind === 0) { // deriva lenta hacia un lado
+        dx = (Math.random() < 0.5 ? -1 : 1) * (3 + Math.random() * 3);
+        dy = (Math.random() < 0.5 ? -1 : 1) * (2 + Math.random() * 2);
+      } else if (kind === 1) { // rota apenas
+        drot = (Math.random() < 0.5 ? -1 : 1) * (1 + Math.random() * 1.3);
+      } else if (kind === 2) { // se desplaza unos pocos píxeles
+        dx = (Math.random() < 0.5 ? -1 : 1) * (2 + Math.random() * 2.5);
+      } else { // casi quieta
+        dx = 1; dy = -1; dur = 15 + Math.random() * 5;
+      }
+
+      tile.style.setProperty('--float-dx', dx.toFixed(2) + 'px');
+      tile.style.setProperty('--float-dy', dy.toFixed(2) + 'px');
+      tile.style.setProperty('--float-drot', drot.toFixed(2) + 'deg');
+      tile.style.setProperty('--float-dur', dur.toFixed(2) + 's');
+      tile.style.setProperty('--float-delay', (Math.random() * 4).toFixed(2) + 's');
+    }
+
+    function applyPosition(tile, pos) {
+      tile.style.setProperty('--pos-x', (pos.x || 0) + '%');
+      tile.style.setProperty('--pos-y', (pos.y || 0) + '%');
+      tile.style.setProperty('--pos-scale', pos.scale != null ? pos.scale : 1);
+      tile.style.setProperty('--base-rotate', (pos.rotation != null ? pos.rotation : 0) + 'deg');
+    }
+
+    // ---------- arrastrar ventanas dentro del espacio: mouse y touch
+    // por igual (Pointer Events), acotado a los bordes del espacio ----------
     function makeDraggable(windowEl) {
       var titlebar = windowEl.querySelector('.win-titlebar');
       if (!titlebar) return;
-      var dragPointerId = null, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+      var dragPointerId = null, startClientX = 0, startClientY = 0, startXPct = 0, startYPct = 0;
+
+      titlebar.style.touchAction = 'none';
 
       titlebar.addEventListener('pointerdown', function (e) {
-        if (window.innerWidth <= 720) return;
         if (e.target.closest('.win-btn')) return;
-
-        if (!collectionHeightLocked) {
-          collection.style.minHeight = collection.getBoundingClientRect().height + 'px';
-          collectionHeightLocked = true;
-        }
 
         var collRect = collection.getBoundingClientRect();
         var winRect = windowEl.getBoundingClientRect();
-        startLeft = winRect.left - collRect.left;
-        startTop = winRect.top - collRect.top;
+        startXPct = (winRect.left - collRect.left) / collRect.width * 100;
+        startYPct = (winRect.top - collRect.top) / collRect.height * 100;
 
-        windowEl.style.position = 'absolute';
-        windowEl.style.left = startLeft + 'px';
-        windowEl.style.top = startTop + 'px';
-
-        startX = e.clientX;
-        startY = e.clientY;
+        startClientX = e.clientX;
+        startClientY = e.clientY;
         dragPointerId = e.pointerId;
+        windowEl.classList.remove('is-remote-moving');
         windowEl.classList.add('is-dragging');
         titlebar.setPointerCapture(e.pointerId);
       });
@@ -289,53 +400,64 @@
       titlebar.addEventListener('pointermove', function (e) {
         if (dragPointerId !== e.pointerId) return;
         var collRect = collection.getBoundingClientRect();
-        var maxLeft = Math.max(0, collRect.width - windowEl.offsetWidth);
-        var maxTop = Math.max(0, collRect.height - windowEl.offsetHeight);
-        var newLeft = Math.min(Math.max(0, startLeft + (e.clientX - startX)), maxLeft);
-        var newTop = Math.min(Math.max(0, startTop + (e.clientY - startY)), maxTop);
-        windowEl.style.left = newLeft + 'px';
-        windowEl.style.top = newTop + 'px';
+        // "scale" agranda la ventana desde su esquina (transform-origin:
+        // top left), así que el espacio real que ocupa es offsetWidth/
+        // offsetHeight (sin escalar) multiplicado por su propia escala
+        var scale = parseFloat(windowEl.style.getPropertyValue('--pos-scale')) || 1;
+        var effW = windowEl.offsetWidth * scale;
+        var effH = windowEl.offsetHeight * scale;
+        var dxPct = (e.clientX - startClientX) / collRect.width * 100;
+        var dyPct = (e.clientY - startClientY) / collRect.height * 100;
+        var xPct = clampPercent(startXPct + dxPct, effW, collRect.width);
+        var yPct = clampPercent(startYPct + dyPct, effH, collRect.height);
+        windowEl.style.setProperty('--pos-x', xPct + '%');
+        windowEl.style.setProperty('--pos-y', yPct + '%');
       });
 
       titlebar.addEventListener('pointerup', function (e) {
         if (dragPointerId !== e.pointerId) return;
         dragPointerId = null;
         windowEl.classList.remove('is-dragging');
+
+        var photoId = windowEl.dataset.photoId;
+        if (!photoId) return; // la cámara no tiene posición que guardar
+
+        var xPct = round2(parseFloat(windowEl.style.getPropertyValue('--pos-x')) || 0);
+        var yPct = round2(parseFloat(windowEl.style.getPropertyValue('--pos-y')) || 0);
+        updateKnownPosition(photoId, xPct, yPct);
+        PhotoStore.updatePosition(photoId, { x: xPct, y: yPct }).catch(function () {});
       });
     }
 
     makeDraggable(collection.querySelector('.dtf-window--camera'));
 
-    function addPhotoTile(name, imageSrc, atStart) {
+    // photo = { id, name, image, x, y, rotation, scale }
+    function addPhotoTile(photo) {
       var tile = document.createElement('div');
       tile.className = 'dtf-window dtf-photo';
-      tile.style.transform = 'rotate(' + nextRotation() + 'deg)';
+      tile.dataset.photoId = photo.id;
+      applyPosition(tile, photo);
+      applyFloatBehavior(tile);
 
       var titlebar = document.createElement('div');
       titlebar.className = 'win-titlebar';
       var titleSpan = document.createElement('span');
       titleSpan.className = 'win-title';
-      titleSpan.textContent = name + '.jpg';
+      titleSpan.textContent = photo.name + '.jpg';
       titlebar.appendChild(titleSpan);
 
       var body = document.createElement('div');
       body.className = 'win-body';
       var img = document.createElement('img');
       img.className = 'dtf-photo-img';
-      img.src = imageSrc;
-      img.alt = name;
+      img.src = photo.image;
+      img.alt = photo.name;
       body.appendChild(img);
 
       tile.appendChild(titlebar);
       tile.appendChild(body);
+      collection.appendChild(tile);
       makeDraggable(tile);
-
-      if (atStart) {
-        var cameraTile = collection.querySelector('.dtf-window--camera');
-        collection.insertBefore(tile, (cameraTile && cameraTile.nextSibling) || collection.firstChild);
-      } else {
-        collection.appendChild(tile);
-      }
     }
 
     shutterBtn.addEventListener('click', function () {
@@ -370,9 +492,11 @@
       saveStatus.dataset.error = 'false';
       saveStatus.textContent = 'guardando...';
 
-      PhotoStore.save(nameInput.value, pendingCapture).then(function (saved) {
+      var initialPos = pickInitialPosition();
+      PhotoStore.save(nameInput.value, pendingCapture, initialPos).then(function (saved) {
         saveStatus.textContent = 'guardada';
-        addPhotoTile(saved.name, saved.image, true);
+        updateKnownPosition(saved.id, saved.x, saved.y);
+        addPhotoTile(saved);
         setTimeout(function () {
           setSaving(false);
           saveStatus.hidden = true;
@@ -390,15 +514,41 @@
     });
 
     // colección existente (de este navegador, o de todos si ya hay
-    // backend conectado — ver assets/js/photo-store.js)
+    // backend conectado — ver assets/js/photo-store.js). Las fotos que
+    // ya existían antes de agregar posiciones libres no tienen x/y
+    // todavía: se les asigna una acá mismo y queda guardada para
+    // siempre (a partir de ahí todos la ven en el mismo lugar).
     PhotoStore.list().then(function (photos) {
-      photos.forEach(function (p) { addPhotoTile(p.name, p.image); });
+      photos.forEach(function (p) {
+        var hasPosition = typeof p.x === 'number' && typeof p.y === 'number';
+        var pos = hasPosition
+          ? { x: p.x, y: p.y, rotation: p.rotation || 0, scale: p.scale || 1 }
+          : pickInitialPosition();
+
+        if (!hasPosition) PhotoStore.updatePosition(p.id, pos).catch(function () {});
+
+        updateKnownPosition(p.id, pos.x, pos.y);
+        addPhotoTile({ id: p.id, name: p.name, image: p.image, x: pos.x, y: pos.y, rotation: pos.rotation, scale: pos.scale });
+      });
       if (!PhotoStore.isRemote()) storageNote.hidden = false;
     }).catch(function () {
       if (PhotoStore.isRemote()) {
         storageNote.textContent = 'no se pudo cargar la colección compartida por ahora — revisá tu conexión.';
       }
       storageNote.hidden = false;
+    });
+
+    // tiempo real: cuando OTRO visitante (o esta misma pestaña, desde
+    // otra ventana) mueve una foto, la seguimos en vivo sin recargar
+    PhotoStore.subscribePositions(function (row) {
+      if (!row || !row.id) return;
+      updateKnownPosition(row.id, row.x, row.y);
+      var tile = collection.querySelector('[data-photo-id="' + row.id + '"]');
+      if (!tile || tile.classList.contains('is-dragging')) return;
+      tile.classList.add('is-remote-moving');
+      tile.style.setProperty('--pos-x', row.x + '%');
+      tile.style.setProperty('--pos-y', row.y + '%');
+      setTimeout(function () { tile.classList.remove('is-remote-moving'); }, 450);
     });
   })();
 </script>

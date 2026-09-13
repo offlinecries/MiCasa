@@ -264,37 +264,57 @@
 
 .dtf-collection {
   position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 30px;
+  width: 100%;
   max-width: 1100px;
+  min-height: 66vh;
   margin: 0 auto;
 }
 
 /* ventanas viejas — misma idea que CAMERA.EXE en sala de juegos:
-   borde fino, barra de título oscura, sin sombras/gradientes modernos */
+   borde fino, barra de título oscura, sin sombras/gradientes modernos.
+   cada una vive en una posición libre (--pos-x/--pos-y/--base-rotate/
+   --pos-scale vienen de Supabase, compartidas entre visitantes) más
+   un movimiento ambiental sutil y propio de cada foto (--float-*, solo
+   visual, nunca se guarda — ver JS) */
 .dtf-window {
-  position: relative;
+  position: absolute;
+  left: var(--pos-x, 0%);
+  top: var(--pos-y, 0%);
+  scale: var(--pos-scale, 1);
+  transform-origin: top left;
   width: 230px;
   max-width: 78vw;
   background: #D4D2C8;
   border: 1px solid #1C1C1A;
   box-shadow: 3px 3px 0 rgba(0,0,0,0.22);
   font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  animation: dtf-float var(--float-dur, 11s) ease-in-out infinite;
+  animation-delay: var(--float-delay, 0s);
 }
 
-/* en PC la cámara se ve más grande que las fotitas guardadas, y todas
-   las ventanas de la colección se pueden arrastrar y soltar dentro del
-   espacio (ver JS) — en mobile se mantiene el orden simple, sin drag */
+@keyframes dtf-float {
+  0%, 100% {
+    translate: 0px 0px;
+    rotate: var(--base-rotate, 0deg);
+  }
+  50% {
+    translate: var(--float-dx, 0px) var(--float-dy, 0px);
+    rotate: calc(var(--base-rotate, 0deg) + var(--float-drot, 0deg));
+  }
+}
+
+/* en PC la cámara se ve más grande que las fotitas guardadas */
 @media (min-width: 721px) {
   .dtf-window--camera { width: 340px; }
 }
 
 .dtf-window.is-dragging {
   z-index: 15;
-  transition: none;
+  animation-play-state: paused;
+}
+
+.dtf-window.is-remote-moving {
+  transition: left 0.4s ease, top 0.4s ease;
 }
 
 .dtf-window .win-titlebar {
@@ -483,6 +503,6 @@
 @media (max-width: 720px) {
   .deja-tu-foto { padding: 9vh 6vw 12vh 6vw; }
   .dtf-title { font-size: 1.9rem; }
-  .dtf-collection { gap: 22px; }
+  .dtf-collection { min-height: 74vh; }
   .dtf-window { width: 78vw; }
 }

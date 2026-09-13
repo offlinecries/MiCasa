@@ -61,3 +61,40 @@ create policy visitor_photos_bucket_insert
   with check (bucket_id = 'visitor-photos');
 
 -- sin policies de update/delete acá tampoco: mismo motivo que arriba.
+
+-- 4) posiciones libres + tiempo real ("dejá tu foto" con caos controlado)
+-- Ejecutar esto también si ya habías corrido el bloque de arriba antes:
+-- todo lo de acá es seguro de correr de nuevo (agrega columnas si
+-- faltan, reemplaza la policy si ya existía, ignora el error si la
+-- tabla ya estaba en la publicación de Realtime).
+
+alter table public.visitor_photos
+  add column if not exists x double precision,
+  add column if not exists y double precision,
+  add column if not exists rotation double precision,
+  add column if not exists scale double precision;
+
+-- cualquiera puede ACTUALIZAR la posición de CUALQUIER foto (mover la
+-- ventana en la mesa compartida) — pero SOLO esas 4 columnas: el grant
+-- de columna de abajo impide tocar filename/image_url/created_at aunque
+-- la policy de RLS permita la fila. Sin policy de delete (sigue sin
+-- poder borrarse nada desde la web pública).
+drop policy if exists visitor_photos_update_position_anon on public.visitor_photos;
+create policy visitor_photos_update_position_anon
+  on public.visitor_photos
+  for update
+  to anon
+  using (true)
+  with check (true);
+
+revoke update on public.visitor_photos from anon;
+grant update (x, y, rotation, scale) on public.visitor_photos to anon;
+
+-- habilita Realtime para esta tabla: cuando alguien mueve una foto,
+-- los demás visitantes conectados reciben el cambio sin recargar
+do $$
+begin
+  alter publication supabase_realtime add table public.visitor_photos;
+exception when duplicate_object then
+  null; -- ya estaba agregada a la publicación, no hay nada más que hacer
+end $$;
