@@ -263,6 +263,7 @@
 }
 
 .dtf-collection {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -284,6 +285,18 @@
   font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 }
 
+/* en PC la cámara se ve más grande que las fotitas guardadas, y todas
+   las ventanas de la colección se pueden arrastrar y soltar dentro del
+   espacio (ver JS) — en mobile se mantiene el orden simple, sin drag */
+@media (min-width: 721px) {
+  .dtf-window--camera { width: 340px; }
+}
+
+.dtf-window.is-dragging {
+  z-index: 15;
+  transition: none;
+}
+
 .dtf-window .win-titlebar {
   display: flex;
   align-items: center;
@@ -296,6 +309,9 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: move;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .dtf-window .win-controls { display: flex; gap: 4px; flex-shrink: 0; }
 .dtf-window .win-btn {

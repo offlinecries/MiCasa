@@ -252,6 +252,60 @@
       return options[lastTileRotation];
     }
 
+    // ---------- arrastrar ventanas dentro del espacio (solo en PC —
+    // en mobile el orden se mantiene simple, sin drag) ----------
+    var collectionHeightLocked = false;
+
+    function makeDraggable(windowEl) {
+      var titlebar = windowEl.querySelector('.win-titlebar');
+      if (!titlebar) return;
+      var dragPointerId = null, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+      titlebar.addEventListener('pointerdown', function (e) {
+        if (window.innerWidth <= 720) return;
+        if (e.target.closest('.win-btn')) return;
+
+        if (!collectionHeightLocked) {
+          collection.style.minHeight = collection.getBoundingClientRect().height + 'px';
+          collectionHeightLocked = true;
+        }
+
+        var collRect = collection.getBoundingClientRect();
+        var winRect = windowEl.getBoundingClientRect();
+        startLeft = winRect.left - collRect.left;
+        startTop = winRect.top - collRect.top;
+
+        windowEl.style.position = 'absolute';
+        windowEl.style.left = startLeft + 'px';
+        windowEl.style.top = startTop + 'px';
+
+        startX = e.clientX;
+        startY = e.clientY;
+        dragPointerId = e.pointerId;
+        windowEl.classList.add('is-dragging');
+        titlebar.setPointerCapture(e.pointerId);
+      });
+
+      titlebar.addEventListener('pointermove', function (e) {
+        if (dragPointerId !== e.pointerId) return;
+        var collRect = collection.getBoundingClientRect();
+        var maxLeft = Math.max(0, collRect.width - windowEl.offsetWidth);
+        var maxTop = Math.max(0, collRect.height - windowEl.offsetHeight);
+        var newLeft = Math.min(Math.max(0, startLeft + (e.clientX - startX)), maxLeft);
+        var newTop = Math.min(Math.max(0, startTop + (e.clientY - startY)), maxTop);
+        windowEl.style.left = newLeft + 'px';
+        windowEl.style.top = newTop + 'px';
+      });
+
+      titlebar.addEventListener('pointerup', function (e) {
+        if (dragPointerId !== e.pointerId) return;
+        dragPointerId = null;
+        windowEl.classList.remove('is-dragging');
+      });
+    }
+
+    makeDraggable(collection.querySelector('.dtf-window--camera'));
+
     function addPhotoTile(name, imageSrc, atStart) {
       var tile = document.createElement('div');
       tile.className = 'dtf-window dtf-photo';
@@ -274,6 +328,7 @@
 
       tile.appendChild(titlebar);
       tile.appendChild(body);
+      makeDraggable(tile);
 
       if (atStart) {
         var cameraTile = collection.querySelector('.dtf-window--camera');
