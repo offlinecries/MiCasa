@@ -171,10 +171,10 @@
      horizontal de una pieza puntual si algún asset queda descentrado */
   .mirror-face {
     position: absolute;
-    left: 63.7%;
-    top: 25.6%;
-    width: 21.6%;
-    height: 46.4%;
+    left: 57.0%;
+    top: 23.7%;
+    width: 27.3%;
+    height: 52.6%;
   }
   .face-layer {
     position: absolute;
@@ -192,23 +192,15 @@
      justo en el borde superior de cada PNG — en la práctica cada
      pieza tiene su propio margen transparente interno (bbox de alpha
      bien adentro del lienzo de 1080x1080), y la cabeza (--w:100%)
-     tampoco llena los 427px del contenedor: según cuánto "bbox" ocupe
-     cada cabeza dentro de su propio lienzo, la cara real termina
-     apenas pasado la mitad del contenedor, dejando el resto vacío
-     abajo del espejo. cejas/ojos ya quedaban bien calculando su
-     centro real (bbox) sobre la proporción pedida (~30% / ~36%), pero
-     nariz/boca con esa misma cuenta (~48% / ~62%) caían muy por
-     debajo del mentón. Estos valores se recalibraron a ojo (con
-     ?dev=1 y comparando varias cabezas) para que boca/nariz caigan
-     DENTRO de la cara en la mayoría de las combinaciones — con
-     cabezas de proporciones muy distintas (cara larga, pelo que
-     ocupa el lienzo entero) puede quedar algo corrido; para esos
-     casos puntuales conviene retocar a mano con ?dev=1. */
+     tampoco llena el contenedor entero. Estos valores son solo el
+     estado inicial antes de que corra el script: en cuanto se elige
+     (o se randomiza) una pieza, applyDynamicPositions() los pisa según
+     qué cabeza está puesta — ver CABEZA_ANCHORS más abajo. */
   .face-layer[data-layer="cabeza"] { z-index: 1; --t: 0%;    --w: 100%; }
-  .face-layer[data-layer="cejas"]  { z-index: 4; --t: 27.6%; --w: 42%; }
-  .face-layer[data-layer="ojos"]   { z-index: 3; --t: 32.2%; --w: 42%; }
-  .face-layer[data-layer="nariz"]  { z-index: 2; --t: 37.3%; --w: 14%; }
-  .face-layer[data-layer="boca"]   { z-index: 2; --t: 44.1%; --w: 26%; }
+  .face-layer[data-layer="cejas"]  { z-index: 4; --t: 25.7%; --w: 42%; }
+  .face-layer[data-layer="ojos"]   { z-index: 3; --t: 32.3%; --w: 42%; }
+  .face-layer[data-layer="nariz"]  { z-index: 2; --t: 41.3%; --w: 14%; }
+  .face-layer[data-layer="boca"]   { z-index: 2; --t: 48.5%; --w: 26%; }
 
   /* ---------- mobile: espejo fijo arriba + filas apiladas scrolleables ---------- */
   .mobile-mirror, .rows-mobile { display: none; }
@@ -249,10 +241,10 @@
     }
     .mirror-face-mobile {
       position: absolute;
-      left: 28.75%;
-      top: 25.6%;
-      width: 42.5%;
-      height: 48.2%;
+      left: 15.5%;
+      top: 23.5%;
+      width: 53.7%;
+      height: 54.7%;
     }
 
     .rows-mobile { display: block; padding: 3vh 0 0 0; }
@@ -480,15 +472,20 @@
   // del contorno (bbox) no sirve porque, por ejemplo, la cabeza 5 tiene
   // el mentón muy alargado sin cara ahí, y la 6 tiene una melena enorme
   // que no es cara. Valores en % del contenedor de la cara.
+  // estos números están en % de la altura del contenedor .mirror-face,
+  // que a su vez está calibrado al óvalo real del espejo — si el
+  // tamaño/proporción de .mirror-face cambia, hay que reescalar estos
+  // valores por la misma razón (nuevo R / viejo R) para que sigan
+  // apuntando al mismo lugar físico dentro de cada cabeza.
   var CABEZA_ANCHORS = {
-    1: { cejas: 19.5, ojos: 26.0, nariz: 35.8, boca: 42.9 },
-    2: { cejas: 23.4, ojos: 29.3, nariz: 37.7, boca: 44.2 },
-    3: { cejas: 30.6, ojos: 36.4, nariz: 42.3, boca: 46.8 },
-    4: { cejas: 22.1, ojos: 28.6, nariz: 37.1, boca: 43.6 },
-    5: { cejas: 22.8, ojos: 26.7, nariz: 33.8, boca: 41.0 },
-    6: { cejas: 18.2, ojos: 23.4, nariz: 31.2, boca: 37.7 }
+    1: { cejas: 21.7, ojos: 29.0, nariz: 39.9, boca: 47.8 },
+    2: { cejas: 26.1, ojos: 32.7, nariz: 42.0, boca: 49.3 },
+    3: { cejas: 34.1, ojos: 40.6, nariz: 47.2, boca: 52.2 },
+    4: { cejas: 24.6, ojos: 31.9, nariz: 41.4, boca: 48.6 },
+    5: { cejas: 25.4, ojos: 29.8, nariz: 37.7, boca: 45.7 },
+    6: { cejas: 20.3, ojos: 26.1, nariz: 34.8, boca: 42.0 }
   };
-  var DEFAULT_ANCHORS = { cejas: 23.0, ojos: 29.0, nariz: 37.0, boca: 43.5 }; // por si todavía no se eligió cabeza
+  var DEFAULT_ANCHORS = { cejas: 25.7, ojos: 32.3, nariz: 41.3, boca: 48.5 }; // por si todavía no se eligió cabeza
 
   // alto/ancho (bbox recortado) de cada asset individual de
   // cejas/ojos/nariz/boca, medido una vez sobre los PNG ya recortados
@@ -501,7 +498,8 @@
     boca:  [0.497, 0.362, 0.562, 0.612, 0.645, 0.816]
   };
   var FEATURE_WIDTH = { cejas: 42, ojos: 42, nariz: 14, boca: 26 };
-  var R_CONTAINER = 0.6505; // ancho/alto del contenedor de la cara (fijo)
+  // ancho/alto real de .mirror-face: (27.3%*1322) / (52.6%*946)
+  var R_CONTAINER = 0.7253;
 
   function parseIndex(path) {
     var m = path && path.match(/(\d+)\.png$/);
