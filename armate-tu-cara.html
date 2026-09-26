@@ -196,7 +196,7 @@
      estado inicial antes de que corra el script: en cuanto se elige
      (o se randomiza) una pieza, applyDynamicPositions() los pisa según
      qué cabeza está puesta — ver CABEZA_ANCHORS más abajo. */
-  .face-layer[data-layer="cabeza"] { z-index: 1; --t: 0%;    --w: 100%; }
+  .face-layer[data-layer="cabeza"] { z-index: 1; --t: 6%;    --w: 112%; }
   .face-layer[data-layer="cejas"]  { z-index: 4; --t: 25.7%; --w: 42%; }
   .face-layer[data-layer="ojos"]   { z-index: 3; --t: 32.3%; --w: 42%; }
   .face-layer[data-layer="nariz"]  { z-index: 2; --t: 41.3%; --w: 14%; }
@@ -477,15 +477,37 @@
   // tamaño/proporción de .mirror-face cambia, hay que reescalar estos
   // valores por la misma razón (nuevo R / viejo R) para que sigan
   // apuntando al mismo lugar físico dentro de cada cabeza.
-  var CABEZA_ANCHORS = {
+  // valores base (con la cabeza a --t:0%/--w:100% pegada al borde de
+  // arriba del contenedor) — HEAD_TOP_OFFSET/HEAD_SCALE los llevan a
+  // los valores reales que se aplican (cabeza más abajo y más grande,
+  // para que quede centrada en el óvalo en vez de pegada arriba).
+  var HEAD_TOP_OFFSET = 6;   // % del contenedor que baja la cabeza
+  var HEAD_SCALE = 1.12;     // cuánto se agranda la cabeza (y todo lo demás con ella)
+  var CABEZA_ANCHORS_BASE = {
     1: { cejas: 21.7, ojos: 29.0, nariz: 39.9, boca: 47.8 },
     2: { cejas: 26.1, ojos: 32.7, nariz: 42.0, boca: 49.3 },
-    3: { cejas: 34.1, ojos: 40.6, nariz: 47.2, boca: 52.2 },
+    3: { cejas: 26.0, ojos: 32.5, nariz: 39.0, boca: 44.5 },
     4: { cejas: 24.6, ojos: 31.9, nariz: 41.4, boca: 48.6 },
     5: { cejas: 25.4, ojos: 29.8, nariz: 37.7, boca: 45.7 },
     6: { cejas: 20.3, ojos: 26.1, nariz: 34.8, boca: 42.0 }
   };
-  var DEFAULT_ANCHORS = { cejas: 25.7, ojos: 32.3, nariz: 41.3, boca: 48.5 }; // por si todavía no se eligió cabeza
+  var DEFAULT_ANCHORS_BASE = { cejas: 25.7, ojos: 32.3, nariz: 41.3, boca: 48.5 };
+
+  // dónde cae el CENTRO horizontal de la cara de cada cabeza dentro de
+  // su propio lienzo de 1080x1080 (bbox de alfa) — ninguna cabeza
+  // viene perfectamente centrada en su lienzo, así que si cejas/ojos/
+  // nariz/boca se dejan siempre en el centro del contenedor (50%)
+  // quedan corridas respecto a la cara real de esa cabeza puntual.
+  var CABEZA_FACE_FX = { 1: 0.4681, 2: 0.4426, 3: 0.5074, 4: 0.4898, 5: 0.4861, 6: 0.5005 };
+
+  function scaleAnchors(base) {
+    var out = {};
+    for (var k in base) out[k] = HEAD_TOP_OFFSET + base[k] * HEAD_SCALE;
+    return out;
+  }
+  var CABEZA_ANCHORS = {};
+  for (var ci in CABEZA_ANCHORS_BASE) CABEZA_ANCHORS[ci] = scaleAnchors(CABEZA_ANCHORS_BASE[ci]);
+  var DEFAULT_ANCHORS = scaleAnchors(DEFAULT_ANCHORS_BASE);
 
   // alto/ancho (bbox recortado) de cada asset individual de
   // cejas/ojos/nariz/boca, medido una vez sobre los PNG ya recortados
@@ -497,7 +519,9 @@
     nariz: [1.158, 1.207, 1.551, 0.759, 1.527, 1.345],
     boca:  [0.497, 0.362, 0.562, 0.612, 0.645, 0.816]
   };
-  var FEATURE_WIDTH = { cejas: 42, ojos: 42, nariz: 14, boca: 26 };
+  var FEATURE_WIDTH_BASE = { cejas: 42, ojos: 42, nariz: 14, boca: 26 };
+  var FEATURE_WIDTH = {};
+  for (var fk in FEATURE_WIDTH_BASE) FEATURE_WIDTH[fk] = FEATURE_WIDTH_BASE[fk] * HEAD_SCALE;
   // ancho/alto real de .mirror-face: (27.3%*1322) / (52.6%*946)
   var R_CONTAINER = 0.7253;
 
@@ -509,6 +533,10 @@
   function applyDynamicPositions() {
     var cabezaIdx = state.cabeza ? parseIndex(state.cabeza) : null;
     var anchors = (cabezaIdx && CABEZA_ANCHORS[cabezaIdx]) ? CABEZA_ANCHORS[cabezaIdx] : DEFAULT_ANCHORS;
+    // centro horizontal real de la cara de la cabeza elegida, llevado a
+    // % del contenedor (--l:50% + width:HEAD_SCALE*100% de la cabeza)
+    var fx = cabezaIdx && CABEZA_FACE_FX[cabezaIdx] ? CABEZA_FACE_FX[cabezaIdx] : 0.5;
+    var centerX = 50 + (fx - 0.5) * (HEAD_SCALE * 100);
 
     ['cejas', 'ojos', 'nariz', 'boca'].forEach(function (key) {
       if (!state[key]) return;
@@ -520,6 +548,7 @@
       document.querySelectorAll('.face-layer[data-layer="' + key + '"]').forEach(function (el) {
         el.style.setProperty('--t', t + '%');
         el.style.setProperty('--w', w + '%');
+        el.style.setProperty('--l', centerX + '%');
       });
     });
   }
