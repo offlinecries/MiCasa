@@ -484,11 +484,11 @@
   var HEAD_TOP_OFFSET = 6;   // % del contenedor que baja la cabeza
   var HEAD_SCALE = 1.12;     // cuánto se agranda la cabeza (y todo lo demás con ella)
   var CABEZA_ANCHORS_BASE = {
-    1: { cejas: 21.7, ojos: 29.0, nariz: 39.9, boca: 47.8 },
+    1: { cejas: 25.2, ojos: 29.0, nariz: 35.5, boca: 43.7 },
     2: { cejas: 26.1, ojos: 32.7, nariz: 42.0, boca: 49.3 },
-    3: { cejas: 26.0, ojos: 32.5, nariz: 39.0, boca: 44.5 },
+    3: { cejas: 24.1, ojos: 28.0, nariz: 34.5, boca: 42.9 },
     4: { cejas: 24.6, ojos: 31.9, nariz: 41.4, boca: 48.6 },
-    5: { cejas: 25.4, ojos: 29.8, nariz: 37.7, boca: 45.7 },
+    5: { cejas: 23.4, ojos: 26.7, nariz: 33.8, boca: 41.6 },
     6: { cejas: 20.3, ojos: 26.1, nariz: 34.8, boca: 42.0 }
   };
   var DEFAULT_ANCHORS_BASE = { cejas: 25.7, ojos: 32.3, nariz: 41.3, boca: 48.5 };
@@ -498,7 +498,7 @@
   // viene perfectamente centrada en su lienzo, así que si cejas/ojos/
   // nariz/boca se dejan siempre en el centro del contenedor (50%)
   // quedan corridas respecto a la cara real de esa cabeza puntual.
-  var CABEZA_FACE_FX = { 1: 0.4681, 2: 0.4426, 3: 0.5074, 4: 0.4898, 5: 0.4861, 6: 0.5005 };
+  var CABEZA_FACE_FX = { 1: 0.45, 2: 0.4426, 3: 0.45, 4: 0.4898, 5: 0.50, 6: 0.5005 };
 
   function scaleAnchors(base) {
     var out = {};
