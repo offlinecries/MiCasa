@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Armá tu cara — Sala de juegos — Mi Casa</title>
+<link rel="stylesheet" href="style.css">
+<style>
+
+  :root { --room-paper: #D6D6D6; }
+
+  html, body { margin: 0; min-height: 100%; }
+  body { background: var(--room-paper); }
+
+  .grain {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.045;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .home-anchor {
+    position: fixed;
+    top: 36px;
+    left: 44px;
+    font-family: 'Cardinal', serif;
+    font-size: 1.65rem;
+    color: var(--ink);
+    text-decoration: none;
+    opacity: 0.82;
+    z-index: 30;
+  }
+  .home-anchor:hover { opacity: 1; text-decoration: none; }
+
+  .umbrales {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    right: 4vw;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+  }
+  .umbral { display: flex; flex-direction: column; align-items: center; gap: 6px; text-decoration: none; }
+  .umbral img {
+    height: 78px; width: auto; display: block; opacity: 0.75;
+    filter: drop-shadow(0 8px 14px rgba(32,29,25,0.18));
+    transition: transform 0.35s cubic-bezier(.2,.8,.3,1), opacity 0.35s ease;
+  }
+  .umbral-label { font-family: 'Cardinal', serif; font-size: 1rem; color: var(--ink); opacity: 0.75; }
+  .umbral:hover img { transform: scale(1.1); opacity: 1; }
+
+  /* ---------- armá tu cara ---------- */
+  .room-wrap {
+    position: relative;
+    z-index: 5;
+    padding: 11vh 0 10vh 0;
+  }
+
+  .room-title {
+    font-family: 'Cardinal', serif;
+    font-size: 3rem;
+    color: var(--ink);
+    opacity: 0.88;
+    text-align: center;
+    margin: 0 9vw 0.5vh 9vw;
+  }
+
+  .room-subtitle {
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    color: var(--mist);
+    letter-spacing: 0.02em;
+    text-align: center;
+    margin: 0 9vw 3.5vh 9vw;
+  }
+
+  .toolbar {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin: 0 0 4vh 0;
+  }
+  .toolbar button {
+    background: var(--room-paper);
+    border: 1px solid #1C1C1A;
+    color: var(--ink);
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    padding: 9px 16px;
+    cursor: inherit;
+  }
+  .toolbar button:active { background: #bcbab0; }
+
+  /* ---------- escena de escritorio: mueble + espejo tal cual el fondo ---------- */
+  .scene-wrap { width: min(92vw, 1322px); margin: 0 auto; }
+
+  .scene {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1322 / 946;
+    background-image: url('assets/fondobano.jpg');
+    background-size: 100% 100%;
+  }
+
+  .shelf-row {
+    position: absolute;
+    left: 6.8%;
+    width: 39%;
+    display: flex;
+    align-items: center;
+    gap: 1.4%;
+    overflow: hidden;
+  }
+  .shelf-row[data-row="cabeza"] { top: 24.6%; height: 6.6%; }
+  .shelf-row[data-row="cejas"]  { top: 31.2%; height: 11.1%; }
+  .shelf-row[data-row="ojos"]   { top: 42.3%; height: 11.1%; }
+  .shelf-row[data-row="nariz"]  { top: 53.4%; height: 11.1%; }
+  .shelf-row[data-row="boca"]   { top: 64.5%; height: 17.8%; }
+
+  /* cada miniatura reparte un espacio igual dentro de su fila (nunca
+     se sale del mueble) y la imagen se contiene adentro preservando
+     su propia relación de aspecto */
+  .shelf-row .thumb-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .shelf-row .thumb-btn img { max-width: 100%; max-height: 100%; width: auto; height: auto; }
+
+  .thumb-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: inherit;
+    display: block;
+  }
+  .thumb-btn img {
+    height: 100%;
+    width: auto;
+    display: block;
+    pointer-events: none;
+    filter: drop-shadow(0 3px 5px rgba(20,18,15,0.45));
+    opacity: 0.92;
+    transition: transform 0.18s cubic-bezier(.3,1.6,.4,1), filter 0.18s ease, opacity 0.18s ease;
+  }
+  .thumb-btn:hover img { transform: scale(1.14); opacity: 1; }
+  .thumb-btn.is-selected img {
+    opacity: 1;
+    filter: drop-shadow(0 3px 5px rgba(20,18,15,0.45)) drop-shadow(0 0 9px rgba(255,214,140,0.85));
+  }
+  .thumb-btn.is-pop img { animation: thumb-pop 0.32s cubic-bezier(.3,1.6,.4,1); }
+  @keyframes thumb-pop {
+    0%   { transform: scale(1); }
+    45%  { transform: scale(1.32); }
+    100% { transform: scale(1.14); }
+  }
+
+  /* cara dentro del espejo — ver spec: cada capa position:absolute,
+     left:50%, translateX(-50%), top/width propios (--t/--w/--l), con
+     z-index fijo por capa. --l existe para poder correr el centro
+     horizontal de una pieza puntual si algún asset queda descentrado */
+  .mirror-face {
+    position: absolute;
+    left: 63.7%;
+    top: 25.6%;
+    width: 21.6%;
+    height: 46.4%;
+  }
+  .face-layer {
+    position: absolute;
+    left: var(--l, 50%);
+    top: var(--t, 0%);
+    width: var(--w, 100%);
+    transform: translateX(-50%) scale(0.88);
+    opacity: 0;
+    transition: opacity 0.26s ease, transform 0.26s cubic-bezier(.3,1.3,.4,1);
+    pointer-events: none;
+  }
+  .face-layer.is-visible { opacity: 1; transform: translateX(-50%) scale(1); }
+  .face-layer img { display: block; width: 100%; height: auto; }
+  /* el enunciado daba top:30/36/48/62 asumiendo que el dibujo arranca
+     justo en el borde superior de cada PNG — en la práctica cada
+     pieza tiene su propio margen transparente interno (bbox de alpha
+     bien adentro del lienzo de 1080x1080), y la cabeza (--w:100%)
+     tampoco llena los 427px del contenedor: según cuánto "bbox" ocupe
+     cada cabeza dentro de su propio lienzo, la cara real termina
+     apenas pasado la mitad del contenedor, dejando el resto vacío
+     abajo del espejo. cejas/ojos ya quedaban bien calculando su
+     centro real (bbox) sobre la proporción pedida (~30% / ~36%), pero
+     nariz/boca con esa misma cuenta (~48% / ~62%) caían muy por
+     debajo del mentón. Estos valores se recalibraron a ojo (con
+     ?dev=1 y comparando varias cabezas) para que boca/nariz caigan
+     DENTRO de la cara en la mayoría de las combinaciones — con
+     cabezas de proporciones muy distintas (cara larga, pelo que
+     ocupa el lienzo entero) puede quedar algo corrido; para esos
+     casos puntuales conviene retocar a mano con ?dev=1. */
+  .face-layer[data-layer="cabeza"] { z-index: 1; --t: 0%;    --w: 100%; }
+  .face-layer[data-layer="cejas"]  { z-index: 4; --t: 14.4%; --w: 55%; }
+  .face-layer[data-layer="ojos"]   { z-index: 3; --t: 21.2%; --w: 50%; }
+  .face-layer[data-layer="nariz"]  { z-index: 2; --t: 35.5%; --w: 18%; }
+  .face-layer[data-layer="boca"]   { z-index: 2; --t: 30.5%; --w: 35%; }
+
+  /* ---------- mobile: espejo fijo arriba + filas apiladas scrolleables ---------- */
+  .mobile-mirror, .rows-mobile { display: none; }
+
+  @media (max-width: 720px) {
+    .home-anchor { top: 20px; left: 20px; font-size: 1.3rem; }
+    .umbrales {
+      top: auto; bottom: 0; left: 0; right: 0; transform: none;
+      width: 100%; flex-direction: row; justify-content: center; gap: 26px;
+      padding: 18px 0 12px 0;
+      background-image: url('assets/barra.jpg'); background-size: cover; background-position: center;
+    }
+    .umbral img { height: 40px; filter: drop-shadow(0 4px 5px rgba(0,0,0,0.55)) drop-shadow(0 0 7px rgba(0,0,0,0.4)); }
+    .umbral-label { font-size: 0.86rem; opacity: 1; color: #1C1C1A; background: rgba(238,232,220,0.88); padding: 2px 7px; border-radius: 2px; }
+
+    .room-wrap { padding: 8vh 0 20vh 0; }
+    .room-title { font-size: 2.1rem; margin: 0 6vw 0.5vh 6vw; }
+    .room-subtitle { margin: 0 6vw 3vh 6vw; }
+
+    .scene-wrap { display: none; }
+
+    .mobile-mirror {
+      display: block;
+      position: sticky;
+      top: 0;
+      z-index: 15;
+      background: var(--room-paper);
+      padding: 10px 0 12px 0;
+      box-shadow: 0 8px 14px -6px rgba(20,18,15,0.35);
+    }
+    .mobile-mirror-scene {
+      position: relative;
+      width: min(66vw, 300px);
+      margin: 0 auto;
+      aspect-ratio: 672 / 910;
+      background-image: url('assets/armar-cara/espejo-solo.jpg');
+      background-size: 100% 100%;
+    }
+    .mirror-face-mobile {
+      position: absolute;
+      left: 28.75%;
+      top: 25.6%;
+      width: 42.5%;
+      height: 48.2%;
+    }
+
+    .rows-mobile { display: block; padding: 3vh 0 0 0; }
+    .row-mobile { margin: 0 0 3.2vh 0; }
+    .row-mobile-label {
+      font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.04em;
+      color: var(--mist);
+      margin: 0 6vw 10px 6vw;
+    }
+    .row-mobile-strip {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding: 4px 6vw 10px 6vw;
+      -webkit-overflow-scrolling: touch;
+    }
+    .row-mobile-strip .thumb-btn { height: 82px; }
+    .row-mobile-strip[data-row="cabeza"] .thumb-btn { height: 110px; }
+    .row-mobile-strip[data-row="boca"] .thumb-btn { height: 62px; }
+  }
+
+  /* ---------- panel de calibración (?dev=1) ---------- */
+  #devPanel {
+    position: fixed;
+    right: 14px;
+    bottom: 14px;
+    z-index: 60;
+    width: 258px;
+    max-height: 82vh;
+    overflow-y: auto;
+    background: #1C1C1A;
+    color: #D4D2C8;
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    font-size: 0.68rem;
+    border: 1px solid #000;
+    padding: 10px;
+  }
+  #devPanel h3 { margin: 10px 0 4px 0; font-size: 0.72rem; opacity: 0.85; }
+  #devPanel h3:first-child { margin-top: 0; }
+  #devPanel label { display: block; margin: 5px 0 2px 0; opacity: 0.85; }
+  #devPanel input[type="range"] { width: 100%; }
+  #devPanel .val { opacity: 0.6; }
+  #devPanel button {
+    margin-top: 10px;
+    width: 100%;
+    background: #D4D2C8;
+    color: #1C1C1A;
+    border: 1px solid #000;
+    font-family: inherit;
+    font-size: 0.68rem;
+    padding: 7px 4px;
+    cursor: inherit;
+  }
+  #devPanel pre {
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: #000;
+    padding: 6px;
+    margin-top: 8px;
+    max-height: 140px;
+    overflow: auto;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<a href="index.html" class="home-anchor">mi casa</a>
+
+<div class="umbrales">
+  <a href="memorias.html" class="umbral" aria-label="ir a Memorias">
+    <img src="assets/iconos/ventana-redonda-memorias.png" alt="">
+    <span class="umbral-label">memorias</span>
+  </a>
+  <a href="archivos.html" class="umbral" aria-label="ir a Archivos">
+    <img src="assets/iconos/puerta-archivos.png" alt="">
+    <span class="umbral-label">archivos</span>
+  </a>
+  <a href="pensamientos.html" class="umbral" aria-label="ir a Pensamientos">
+    <img src="assets/iconos/buzon-pensamientos.png" alt="">
+    <span class="umbral-label">pensamientos</span>
+  </a>
+  <a href="escuchas.html" class="umbral" aria-label="ir a Escuchas">
+    <img src="assets/iconos/puerta-escuchas.png" alt="">
+    <span class="umbral-label">escuchas</span>
+  </a>
+  <a href="trabajo.html" class="umbral" aria-label="ir a Trabajo">
+    <img src="assets/iconos/ventana-vieja-trabajo.png" alt="">
+    <span class="umbral-label">trabajo</span>
+  </a>
+</div>
+
+<div class="room-wrap">
+  <div class="room-title">armá tu cara</div>
+  <div class="room-subtitle">elegí de arriba hacia abajo: cabeza, cejas, ojos, nariz, boca — se arma sola en el espejo</div>
+
+  <div class="toolbar">
+    <button id="btnRandom" type="button">[ aleatorizar ]</button>
+    <button id="btnReset" type="button">[ reset ]</button>
+  </div>
+
+  <!-- ---------- desktop / tablet: mueble + espejo completos ---------- -->
+  <div class="scene-wrap">
+    <div class="scene" id="scene">
+      <div class="shelf-row" data-row="cabeza"></div>
+      <div class="shelf-row" data-row="cejas"></div>
+      <div class="shelf-row" data-row="ojos"></div>
+      <div class="shelf-row" data-row="nariz"></div>
+      <div class="shelf-row" data-row="boca"></div>
+
+      <div class="mirror-face" id="mirrorFaceDesktop">
+        <div class="face-layer" data-layer="cabeza"><img alt=""></div>
+        <div class="face-layer" data-layer="cejas"><img alt=""></div>
+        <div class="face-layer" data-layer="ojos"><img alt=""></div>
+        <div class="face-layer" data-layer="nariz"><img alt=""></div>
+        <div class="face-layer" data-layer="boca"><img alt=""></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- mobile: espejo fijo arriba + filas apiladas ---------- -->
+  <div class="mobile-mirror">
+    <div class="mobile-mirror-scene">
+      <div class="mirror-face-mobile" id="mirrorFaceMobile">
+        <div class="face-layer" data-layer="cabeza"><img alt=""></div>
+        <div class="face-layer" data-layer="cejas"><img alt=""></div>
+        <div class="face-layer" data-layer="ojos"><img alt=""></div>
+        <div class="face-layer" data-layer="nariz"><img alt=""></div>
+        <div class="face-layer" data-layer="boca"><img alt=""></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rows-mobile" id="rowsMobile"></div>
+</div>
+
+<div id="devPanel" hidden></div>
+
+<script>
+  var CATEGORIES = [
+    { key: 'cabeza', label: 'cabezas', folder: 'cabezas 2', thumbFolder: 'cabezas', prefix: 'cabeza', count: 6 },
+    { key: 'cejas',  label: 'cejas',   folder: 'cejas',     thumbFolder: 'cejas',   prefix: 'ceja',   count: 6 },
+    { key: 'ojos',   label: 'ojos',    folder: 'ojos',      thumbFolder: 'ojos',    prefix: 'ojo',    count: 6 },
+    { key: 'nariz',  label: 'narices', folder: 'narices 2', thumbFolder: 'narices', prefix: 'nariz',  count: 6 },
+    { key: 'boca',   label: 'bocas',   folder: 'bocas 2',   thumbFolder: 'bocas',   prefix: 'boca',   count: 6 }
+  ];
+
+  var state = { cabeza: null, cejas: null, ojos: null, nariz: null, boca: null };
+
+  function fullPath(cat, i) { return 'assets/' + cat.folder + '/' + cat.prefix + i + '.png'; }
+  function thumbPath(cat, i) { return 'assets/armar-cara/thumbs/' + cat.thumbFolder + '/' + cat.prefix + i + '.png'; }
+
+  // ---------- filas de miniaturas (desktop, sobre el mueble) ----------
+  CATEGORIES.forEach(function (cat) {
+    var row = document.querySelector('.shelf-row[data-row="' + cat.key + '"]');
+    for (var i = 1; i <= cat.count; i++) {
+      row.appendChild(makeThumbBtn(cat, i));
+    }
+  });
+
+  // ---------- filas apiladas (mobile) ----------
+  var rowsMobile = document.getElementById('rowsMobile');
+  CATEGORIES.forEach(function (cat) {
+    var wrap = document.createElement('div');
+    wrap.className = 'row-mobile';
+
+    var label = document.createElement('div');
+    label.className = 'row-mobile-label';
+    label.textContent = cat.label;
+    wrap.appendChild(label);
+
+    var strip = document.createElement('div');
+    strip.className = 'row-mobile-strip';
+    strip.dataset.row = cat.key;
+    for (var i = 1; i <= cat.count; i++) {
+      strip.appendChild(makeThumbBtn(cat, i));
+    }
+    wrap.appendChild(strip);
+    rowsMobile.appendChild(wrap);
+  });
+
+  function makeThumbBtn(cat, i) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'thumb-btn';
+    btn.dataset.category = cat.key;
+    btn.dataset.index = i;
+    var img = document.createElement('img');
+    img.src = thumbPath(cat, i);
+    img.alt = cat.label + ' ' + i;
+    btn.appendChild(img);
+    btn.addEventListener('click', function () { selectPiece(cat, i, btn); });
+    return btn;
+  }
+
+  function selectPiece(cat, i, sourceBtn) {
+    state[cat.key] = fullPath(cat, i);
+    refreshUI();
+
+    // feedback: "pop" en todos los botones de esa pieza (desktop + mobile)
+    document.querySelectorAll('.thumb-btn[data-category="' + cat.key + '"][data-index="' + i + '"]').forEach(function (btn) {
+      btn.classList.add('is-pop');
+      setTimeout(function () { btn.classList.remove('is-pop'); }, 320);
+    });
+  }
+
+  function refreshUI() {
+    // resaltar la miniatura seleccionada de cada categoría (o ninguna si es null)
+    CATEGORIES.forEach(function (cat) {
+      var selectedIdx = null;
+      if (state[cat.key]) {
+        var m = state[cat.key].match(/(\d+)\.png$/);
+        if (m) selectedIdx = m[1];
+      }
+      document.querySelectorAll('.thumb-btn[data-category="' + cat.key + '"]').forEach(function (btn) {
+        btn.classList.toggle('is-selected', selectedIdx !== null && btn.dataset.index === selectedIdx);
+      });
+    });
+
+    // actualizar las dos copias de la cara (escritorio + mobile)
+    document.querySelectorAll('.face-layer').forEach(function (layerEl) {
+      var key = layerEl.dataset.layer;
+      var img = layerEl.querySelector('img');
+      var path = state[key];
+
+      if (!path) {
+        layerEl.classList.remove('is-visible');
+        return;
+      }
+      if (img.getAttribute('src') !== path) {
+        layerEl.classList.remove('is-visible');
+        img.src = path;
+      }
+      // forzar reflow para que la transición de aparición se dispare siempre
+      void layerEl.offsetWidth;
+      layerEl.classList.add('is-visible');
+    });
+  }
+
+  function randomize() {
+    CATEGORIES.forEach(function (cat) {
+      var i = 1 + Math.floor(Math.random() * cat.count);
+      selectPiece(cat, i, null);
+    });
+  }
+
+  function resetFace() {
+    CATEGORIES.forEach(function (cat) { state[cat.key] = null; });
+    refreshUI();
+  }
+
+  document.getElementById('btnRandom').addEventListener('click', randomize);
+  document.getElementById('btnReset').addEventListener('click', resetFace);
+
+  // ---------- modo dev: ?dev=1 — sliders para calibrar top/left/width
+  // de cada capa a ojo, y un botón para copiar los valores finales ----------
+  if (/[?&]dev=1\b/.test(location.search)) {
+    var panel = document.getElementById('devPanel');
+    panel.hidden = false;
+
+    var defaults = {};
+    document.querySelectorAll('.face-layer[data-layer]').forEach(function (el) {
+      var key = el.dataset.layer;
+      if (defaults[key]) return; // desktop y mobile comparten los mismos valores iniciales
+      var cs = getComputedStyle(el);
+      defaults[key] = {
+        t: parseFloat(cs.getPropertyValue('--t')) || 0,
+        l: parseFloat(cs.getPropertyValue('--l')) || 50,
+        w: parseFloat(cs.getPropertyValue('--w')) || 100
+      };
+    });
+
+    var current = JSON.parse(JSON.stringify(defaults));
+
+    function applyVar(key, prop, value) {
+      document.querySelectorAll('.face-layer[data-layer="' + key + '"]').forEach(function (el) {
+        el.style.setProperty('--' + prop, value + '%');
+      });
+    }
+
+    CATEGORIES.forEach(function (cat) {
+      var h = document.createElement('h3');
+      h.textContent = cat.key;
+      panel.appendChild(h);
+
+      ['t', 'l', 'w'].forEach(function (prop) {
+        var propLabel = { t: 'top', l: 'left', w: 'width' }[prop];
+        var row = document.createElement('label');
+        row.textContent = propLabel + ': ';
+        var span = document.createElement('span');
+        span.className = 'val';
+        span.textContent = current[cat.key][prop] + '%';
+        row.appendChild(span);
+        panel.appendChild(row);
+
+        var input = document.createElement('input');
+        input.type = 'range';
+        input.min = prop === 'w' ? 5 : -20;
+        input.max = prop === 'w' ? 150 : 120;
+        input.step = 0.5;
+        input.value = current[cat.key][prop];
+        input.addEventListener('input', function () {
+          current[cat.key][prop] = parseFloat(input.value);
+          span.textContent = input.value + '%';
+          applyVar(cat.key, prop, input.value);
+        });
+        panel.appendChild(input);
+      });
+    });
+
+    var copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.textContent = '[ copiar valores ]';
+    var out = document.createElement('pre');
+    copyBtn.addEventListener('click', function () {
+      var text = JSON.stringify(current, null, 2);
+      out.textContent = text;
+      if (navigator.clipboard) navigator.clipboard.writeText(text).catch(function () {});
+    });
+    panel.appendChild(copyBtn);
+    panel.appendChild(out);
+
+    // para poder ver bien lo que se está calibrando, arrancar con una
+    // combinación cualquiera puesta en vez del espejo vacío
+    randomize();
+  }
+
+  refreshUI();
+</script>
+
+</body>
+</html>
