@@ -183,7 +183,7 @@
     width: var(--w, 100%);
     transform: translateX(-50%) scale(0.88);
     opacity: 0;
-    transition: opacity 0.26s ease, transform 0.26s cubic-bezier(.3,1.3,.4,1);
+    transition: opacity 0.26s ease, transform 0.26s cubic-bezier(.3,1.3,.4,1), top 0.3s ease;
     pointer-events: none;
   }
   .face-layer.is-visible { opacity: 1; transform: translateX(-50%) scale(1); }
@@ -205,10 +205,10 @@
      ocupa el lienzo entero) puede quedar algo corrido; para esos
      casos puntuales conviene retocar a mano con ?dev=1. */
   .face-layer[data-layer="cabeza"] { z-index: 1; --t: 0%;    --w: 100%; }
-  .face-layer[data-layer="cejas"]  { z-index: 4; --t: 14.4%; --w: 55%; }
-  .face-layer[data-layer="ojos"]   { z-index: 3; --t: 21.2%; --w: 50%; }
-  .face-layer[data-layer="nariz"]  { z-index: 2; --t: 35.5%; --w: 18%; }
-  .face-layer[data-layer="boca"]   { z-index: 2; --t: 30.5%; --w: 35%; }
+  .face-layer[data-layer="cejas"]  { z-index: 4; --t: 27.6%; --w: 42%; }
+  .face-layer[data-layer="ojos"]   { z-index: 3; --t: 32.2%; --w: 42%; }
+  .face-layer[data-layer="nariz"]  { z-index: 2; --t: 37.3%; --w: 14%; }
+  .face-layer[data-layer="boca"]   { z-index: 2; --t: 44.1%; --w: 26%; }
 
   /* ---------- mobile: espejo fijo arriba + filas apiladas scrolleables ---------- */
   .mobile-mirror, .rows-mobile { display: none; }
@@ -406,7 +406,17 @@
 
   var state = { cabeza: null, cejas: null, ojos: null, nariz: null, boca: null };
 
-  function fullPath(cat, i) { return 'assets/' + cat.folder + '/' + cat.prefix + i + '.png'; }
+  // la cabeza se compone con el PNG completo (define el ancho/alto del
+  // contenedor), pero cejas/ojos/nariz/boca vienen con un margen
+  // transparente enorme e irregular en su lienzo de 1080x1080 — para
+  // que el --top/--width de cada capa posicione lo que realmente se
+  // VE (y no un cuadrado casi vacío), se usa una versión recortada al
+  // contenido real (bbox de alfa + padding chico) para la composición
+  // en el espejo, generada aparte de las miniaturas de las filas.
+  function fullPath(cat, i) {
+    if (cat.key === 'cabeza') return 'assets/' + cat.folder + '/' + cat.prefix + i + '.png';
+    return 'assets/armar-cara/render/' + cat.key + '/' + cat.prefix + i + '.png';
+  }
   function thumbPath(cat, i) { return 'assets/armar-cara/thumbs/' + cat.thumbFolder + '/' + cat.prefix + i + '.png'; }
 
   // ---------- filas de miniaturas (desktop, sobre el mueble) ----------
@@ -452,6 +462,70 @@
     return btn;
   }
 
+  // ---------- posición dinámica de cada capa según la cabeza Y la
+  // pieza elegidas ----------
+  // las cabezas no están recortadas parejo: algunas tienen mucho pelo
+  // (la cara real es una porción chica del lienzo de 1080x1080) y
+  // otras casi no tienen margen (la cara ocupa casi todo el lienzo).
+  // Un mismo "top" fijo para cejas/ojos/nariz/boca quedaba bien para
+  // algunas cabezas y mal para otras. Estos rangos [inicio,fin] son la
+  // franja real (bbox de alfa, medida por script) donde cada cabeza
+  // tiene cara dentro de su propio lienzo — con esto, las capas se
+  // reubican dentro de ESA franja en vez de en una posición fija.
+  // cada cabeza es un dibujo distinto (no una plantilla pareja): el
+  // nivel real de cejas/ojos/nariz/boca dentro del lienzo de 1080x1080
+  // se midió a ojo, cabeza por cabeza, mirando dónde cae la frente,
+  // los ojos (o las marcas guía, en las cabezas "en blanco" como la 5),
+  // la nariz y la boca de CADA dibujo — un cálculo genérico a partir
+  // del contorno (bbox) no sirve porque, por ejemplo, la cabeza 5 tiene
+  // el mentón muy alargado sin cara ahí, y la 6 tiene una melena enorme
+  // que no es cara. Valores en % del contenedor de la cara.
+  var CABEZA_ANCHORS = {
+    1: { cejas: 19.5, ojos: 26.0, nariz: 35.8, boca: 42.9 },
+    2: { cejas: 23.4, ojos: 29.3, nariz: 37.7, boca: 44.2 },
+    3: { cejas: 30.6, ojos: 36.4, nariz: 42.3, boca: 46.8 },
+    4: { cejas: 22.1, ojos: 28.6, nariz: 37.1, boca: 43.6 },
+    5: { cejas: 22.8, ojos: 26.7, nariz: 33.8, boca: 41.0 },
+    6: { cejas: 18.2, ojos: 23.4, nariz: 31.2, boca: 37.7 }
+  };
+  var DEFAULT_ANCHORS = { cejas: 23.0, ojos: 29.0, nariz: 37.0, boca: 43.5 }; // por si todavía no se eligió cabeza
+
+  // alto/ancho (bbox recortado) de cada asset individual de
+  // cejas/ojos/nariz/boca, medido una vez sobre los PNG ya recortados
+  // en assets/armar-cara/render/ — se usa junto con --w para saber
+  // cuánto ocupa en alto esa pieza puntual dentro del contenedor.
+  var FEATURE_ASPECT = {
+    cejas: [0.201, 0.121, 0.098, 0.167, 0.244, 0.224],
+    ojos:  [0.290, 0.332, 0.319, 0.195, 0.303, 0.215],
+    nariz: [1.158, 1.207, 1.551, 0.759, 1.527, 1.345],
+    boca:  [0.497, 0.362, 0.562, 0.612, 0.645, 0.816]
+  };
+  var FEATURE_WIDTH = { cejas: 42, ojos: 42, nariz: 14, boca: 26 };
+  var R_CONTAINER = 0.6505; // ancho/alto del contenedor de la cara (fijo)
+
+  function parseIndex(path) {
+    var m = path && path.match(/(\d+)\.png$/);
+    return m ? parseInt(m[1], 10) : null;
+  }
+
+  function applyDynamicPositions() {
+    var cabezaIdx = state.cabeza ? parseIndex(state.cabeza) : null;
+    var anchors = (cabezaIdx && CABEZA_ANCHORS[cabezaIdx]) ? CABEZA_ANCHORS[cabezaIdx] : DEFAULT_ANCHORS;
+
+    ['cejas', 'ojos', 'nariz', 'boca'].forEach(function (key) {
+      if (!state[key]) return;
+      var idx = parseIndex(state[key]);
+      if (!idx) return;
+      var aspect = FEATURE_ASPECT[key][idx - 1];
+      var w = FEATURE_WIDTH[key];
+      var t = anchors[key] - 0.5 * w * aspect * R_CONTAINER;
+      document.querySelectorAll('.face-layer[data-layer="' + key + '"]').forEach(function (el) {
+        el.style.setProperty('--t', t + '%');
+        el.style.setProperty('--w', w + '%');
+      });
+    });
+  }
+
   function selectPiece(cat, i, sourceBtn) {
     state[cat.key] = fullPath(cat, i);
     refreshUI();
@@ -475,6 +549,8 @@
         btn.classList.toggle('is-selected', selectedIdx !== null && btn.dataset.index === selectedIdx);
       });
     });
+
+    applyDynamicPositions();
 
     // actualizar las dos copias de la cara (escritorio + mobile)
     document.querySelectorAll('.face-layer').forEach(function (layerEl) {
