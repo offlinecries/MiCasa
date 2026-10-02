@@ -1,5 +1,44 @@
-:root { --home-gray: #D6D6D6; }
-@font-face { font-family: 'Cardinal'; src: url('assets/fonts/Cardinal.ttf') format('truetype'); } html, body { margin: 0; background: #c9c7c2; min-height: 100vh; min-height: 100dvh; cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Ctext x='2' y='24' font-size='26' fill='%231C1C1A'%3E%E2%9A%9C%3C/text%3E%3C/svg%3E") 16 16, auto; } .house-wrap { position: relative; width: 100%; height: 100vh; height: 100svh; overflow: hidden; background-image: url('assets/casa/micasa-compu.jpg'); background-size: cover; background-position: 50% 50%; background-repeat: no-repeat; } a, .hotspot, .umbral, .pasillo-room { cursor: inherit; } .hotspot { position: absolute; display: block; z-index: 1; } .hotspot:hover { z-index: 5; } .hotspot-label { opacity: 0; transition: opacity 0.25s ease, background 0.15s, color 0.15s; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Cardinal', serif; font-size: 2.6rem; color: #1C1C1A; background: #c9c7c2; padding: 0 12px; line-height: 1.1; border-radius: 0px; white-space: nowrap; pointer-events: none; } .hotspot:hover .hotspot-label { opacity: 1; background: #1C1C1A; color: #c9c7c2; } .hotspot[href="trabajo.html"] .hotspot-label { top: 35%; } .site-title { position: absolute; top: 5%; left: 6%; font-family: 'Cardinal', serif; font-size: 4.8rem; color: #1C1C1A; z-index: 5; margin: 0; } @media (max-width: 820px) {
+:root {
+  --home-gray: #D6D6D6;
+  /* ---------- motion: tocar estos valores para ajustar el ritmo global ----------
+     --dur-fast  : hovers / microinteracciones rápidas
+     --dur-med   : entradas, reveals, aperturas de ventana
+     --dur-slow  : el "glitch"/decode del título
+     --stagger   : separación entre elementos en cascada (íconos, ventanas del pasillo)
+     subí los --dur-* para que todo se sienta más lento/suave, bajalos para algo más ágil */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft: cubic-bezier(0.2, 0.8, 0.3, 1);
+  --dur-fast: 0.18s;
+  --dur-med: 0.45s;
+  --dur-slow: 0.7s;
+  --stagger: 0.1s;
+}
+
+/* reduce TODO el motion (lo nuevo y lo que ya existía) a algo casi
+   instantáneo para quien pidió menos movimiento en su sistema —
+   nunca lo desactivamos del todo con display/visibility para no
+   esconder contenido si algún estado quedó a mitad de camino */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01s !important;
+    scroll-behavior: auto !important;
+  }
+  .room-png, .frase-deco, .pasillo-room, .pasillo-tilt {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    clip-path: none !important;
+  }
+}
+@font-face { font-family: 'Cardinal'; src: url('assets/fonts/Cardinal.ttf') format('truetype'); } html, body { margin: 0; background: #c9c7c2; min-height: 100vh; min-height: 100dvh; cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Ctext x='2' y='24' font-size='26' fill='%231C1C1A'%3E%E2%9A%9C%3C/text%3E%3C/svg%3E") 16 16, auto; } .house-wrap { position: relative; width: 100%; height: 100vh; height: 100svh; overflow: hidden; background-image: url('assets/casa/micasa-compu.jpg'); background-size: cover; background-position: 50% 50%; background-repeat: no-repeat; } a, .hotspot, .umbral, .pasillo-room { cursor: inherit; } .hotspot { position: absolute; display: block; z-index: 1; } .hotspot:hover { z-index: 5; } .hotspot-label { opacity: 0; transition: opacity 0.25s ease, background 0.15s, color 0.15s; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Cardinal', serif; font-size: 2.6rem; color: #1C1C1A; background: #c9c7c2; padding: 0 12px; line-height: 1.1; border-radius: 0px; white-space: nowrap; pointer-events: none; } .hotspot:hover .hotspot-label { opacity: 1; background: #1C1C1A; color: #c9c7c2; } .hotspot[href="trabajo.html"] .hotspot-label { top: 35%; } .site-title { position: absolute; top: 5%; left: 6%; font-family: 'Cardinal', serif; font-size: 4.8rem; color: #1C1C1A; z-index: 5; margin: 0; }
+/* decode/glitch de entrada: dos capas de texto desfasadas en rojo/cian
+   (RGB split) que se van estabilizando mientras el JS resuelve el
+   scramble de caracteres — ver introDecodeTitle() */
+.site-title.is-decoding { text-shadow: 2px 0 rgba(230,30,30,0.45), -2px 0 rgba(30,180,230,0.45); }
+.site-title.is-decoding::selection { background: transparent; }
+@media (max-width: 820px) {
   /* en celular usamos otra imagen de fondo (recortada distinto), con el
      mismo esquema de background-size:cover; las posiciones de hotspots,
      room-png y frase-deco las calcula el script al final del body (según
@@ -39,16 +78,30 @@
   pointer-events: none;
   z-index: 2;
   height: auto;
+  opacity: 0;
   transform-origin: 50% 100%;
   filter: drop-shadow(0 0px 0px rgba(20,18,15,0));
-  transition: transform 0.35s cubic-bezier(.2,.8,.3,1), filter 0.35s ease;
-  animation: mc-invitar 1.7s ease-in-out 1 both;
+  transition: transform 0.35s cubic-bezier(.2,.8,.3,1), filter 0.35s ease, translate 0.3s ease-out;
+  /* entrada (mc-enter, una vez) encadenada con el "invitar" de siempre
+     (mc-invitar, también una vez): cada ícono tiene su propio par de
+     delays via --enter-delay/--invite-delay (inline, ver index.html) */
+  animation: mc-enter var(--dur-med) var(--ease-out) var(--enter-delay, 0.7s) both,
+             mc-invitar 1.7s ease-in-out var(--invite-delay, 1.3s) 1 both;
+  /* parallax sutil del mouse (JS la setea en --px/--py); independiente
+     del "transform" de arriba porque translate/scale/rotate son
+     propiedades propias que se combinan con transform, no lo pisan */
+  translate: var(--px, 0px) var(--py, 0px);
 }
 
 .hotspot:hover + .room-png {
   transform: translateY(-9%) scale(1.09);
-  filter: drop-shadow(0 18px 22px rgba(20,18,15,0.4));
+  filter: drop-shadow(0 18px 22px rgba(20,18,15,0.4)) drop-shadow(0 0 16px rgba(255,241,201,0.6));
   animation: none;
+}
+
+@keyframes mc-enter {
+  from { opacity: 0; transform: translateY(14px) scale(0.92); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes mc-invitar {
@@ -56,6 +109,13 @@
   28% { transform: translateY(-6%) scale(1.035); }
   52% { transform: translateY(1%) scale(0.99); }
   74% { transform: translateY(-3%) scale(1.015); }
+}
+
+@media (max-width: 820px) {
+  /* en mobile no hay parallax de mouse (ver JS), y el tap-active ya
+     tiene su propio feedback — frenamos la entrada un toque para que
+     no se sienta tan brusca en pantallas chicas */
+  .room-png { transition: transform 0.35s cubic-bezier(.2,.8,.3,1), filter 0.35s ease; }
 }
 
 /* costura decorativa al costado — se va "cosiendo" de arriba hacia abajo */
@@ -110,6 +170,11 @@
   transition: opacity 0.2s ease;
 }
 .juegos-link:hover { opacity: 1; }
+.juegos-arrow {
+  display: inline-block;
+  transition: translate var(--dur-fast) var(--ease-out);
+}
+.juegos-link:hover .juegos-arrow { translate: 3px -3px; }
 
 @media (max-width: 820px) {
   .juegos-link { bottom: 12px; right: 12px; font-size: 0.66rem; }
@@ -133,12 +198,16 @@
   mask-position: top;
   -webkit-mask-size: 100% 0%;
   mask-size: 100% 0%;
+  filter: blur(8px);
+  transition: translate 0.3s ease-out;
   animation: frase-dibujar 1.4s ease-out both, frase-tiembla 5s ease-in-out infinite;
+  /* parallax sutil del mouse, igual mecanismo que .room-png */
+  translate: var(--px, 0px) var(--py, 0px);
 }
 
 @keyframes frase-dibujar {
-  0%   { -webkit-mask-size: 100% 0%;   mask-size: 100% 0%; }
-  100% { -webkit-mask-size: 100% 100%; mask-size: 100% 100%; }
+  0%   { -webkit-mask-size: 100% 0%;   mask-size: 100% 0%;   filter: blur(8px); }
+  100% { -webkit-mask-size: 100% 100%; mask-size: 100% 100%; filter: blur(0); }
 }
 
 @keyframes frase-tiembla {
@@ -180,8 +249,127 @@
   gap: 8px;
   text-decoration: none;
   transition: transform 0.35s cubic-bezier(.2,.8,.3,1);
+  /* ---------- reveal al entrar en viewport ----------
+     arranca "cerrada" (clip-path colapsado desde el centro, como un
+     scanline) + un poco achicada; .is-revealed la abre. El stagger
+     entre ventanas es por nth-child más abajo. */
+  opacity: 0;
+  clip-path: inset(48% 0 48% 0);
+  transform: scale(0.85);
+  transition: opacity var(--dur-med) var(--ease-out),
+              clip-path var(--dur-med) var(--ease-out),
+              transform var(--dur-med) var(--ease-out);
 }
+.pasillo-room.is-revealed {
+  opacity: 1;
+  clip-path: inset(0% 0 0% 0);
+}
+.pasillo-room.is-revealed:not(:hover) { transform: scale(1); }
 .pasillo-room:hover { transform: scale(1.07); }
+/* el stagger de apertura (~100ms entre ventana y ventana) lo maneja el
+   JS (ver IntersectionObserver): agrega .is-booting/.is-revealed con
+   un setTimeout escalonado por índice, así que un solo frame de
+   "boot" no queda sincronizado igual en las 5 a la vez */
+
+/* frame breve de "wireframe/carga" ANTES de que se abra la ventana
+   real (.is-booting), sacado apenas arranca .is-revealed */
+.pasillo-room::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  border: 1px solid rgba(28,28,26,0.45);
+  background:
+    repeating-linear-gradient(0deg, rgba(28,28,26,0.12) 0px, rgba(28,28,26,0.12) 1px, transparent 1px, transparent 3px);
+  transition: opacity 0.12s linear;
+}
+.pasillo-room.is-booting::before { opacity: 1; }
+
+.pasillo-room { position: relative; }
+
+/* el tilt 3D va en un wrapper propio (.pasillo-tilt) alrededor de la
+   imagen, para no pelear con el scale()/clip-path de arriba: son
+   elementos distintos, cada transform es independiente */
+.pasillo-tilt {
+  position: relative;
+  display: block;
+  perspective: 600px;
+}
+.pasillo-tilt-inner {
+  position: relative;
+  display: block;
+  transform: rotateX(var(--tilt-rx, 0deg)) rotateY(var(--tilt-ry, 0deg));
+  transition: transform var(--dur-fast) var(--ease-out);
+  will-change: transform;
+}
+/* brillo que recorre la ventana al inclinarla (sigue --tilt-rx/ry) */
+.pasillo-tilt-inner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,0.35) 50%, transparent 60%);
+  background-size: 220% 220%;
+  background-position: calc(50% + var(--tilt-ry, 0deg) * 4) calc(50% + var(--tilt-rx, 0deg) * -4);
+  opacity: 0;
+  transition: opacity var(--dur-fast) ease;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+.pasillo-room:hover .pasillo-tilt-inner::after { opacity: 1; }
+
+/* feedback táctil en mobile: compresión breve en vez de tilt/hover */
+@media (pointer: coarse) {
+  .pasillo-tilt-inner { transition: transform 0.12s ease; }
+  .pasillo-room:active .pasillo-tilt-inner { transform: scale(0.94); }
+  .pasillo-tilt-inner::after { display: none; }
+}
+
+/* parpadeo breve de "encendido de monitor" al terminar de abrirse */
+.pasillo-room.is-revealed .pasillo-tilt-inner {
+  animation: pasillo-crt-on 0.35s steps(1, end) both;
+}
+@keyframes pasillo-crt-on {
+  0%, 20% { opacity: 0.2; }
+  35% { opacity: 1; }
+  45% { opacity: 0.3; }
+  60% { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+/* scanline idle: una línea de brillo recorre cada ventana cada tantos
+   segundos, desfasada entre ventanas — solo una vez reveladas */
+.pasillo-room.is-revealed .pasillo-tilt::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  top: -10%;
+  height: 35%;
+  background: linear-gradient(rgba(255,255,255,0), rgba(255,255,255,0.4), rgba(255,255,255,0));
+  pointer-events: none;
+  animation: pasillo-idle-scan 7s linear infinite;
+  mix-blend-mode: soft-light;
+}
+.pasillo-row .pasillo-room:nth-child(1) .pasillo-tilt::before { animation-delay: 0s; }
+.pasillo-row .pasillo-room:nth-child(2) .pasillo-tilt::before { animation-delay: 1.4s; }
+.pasillo-row .pasillo-room:nth-child(3) .pasillo-tilt::before { animation-delay: 2.8s; }
+.pasillo-row .pasillo-room:nth-child(4) .pasillo-tilt::before { animation-delay: 4.2s; }
+.pasillo-row .pasillo-room:nth-child(5) .pasillo-tilt::before { animation-delay: 5.6s; }
+@keyframes pasillo-idle-scan {
+  0% { top: -40%; }
+  60% { top: 110%; }
+  100% { top: 110%; }
+}
+
+/* salida corta antes de navegar (ver JS: previene el click, anima, y
+   recién ahí cambia de página) */
+.pasillo-room.is-leaving .pasillo-tilt-inner {
+  transition: transform 0.22s var(--ease-out), filter 0.22s var(--ease-out), opacity 0.22s var(--ease-out);
+  transform: rotateX(0) rotateY(0) scale(1.18);
+  filter: brightness(1.6) saturate(0.3);
+  opacity: 0;
+}
 
 .pasillo-room img {
   height: 100px;
@@ -200,7 +388,16 @@
   opacity: 0.85;
   text-shadow: 0 1px 2px rgba(255,255,255,0.35);
   white-space: nowrap;
+  min-height: 1.2em;
 }
+/* mientras el JS tipea/scramblea la etiqueta le ponemos look de
+   terminal (cursor parpadeante); se saca sola al terminar */
+.pasillo-room-label.is-typing::after {
+  content: '▌';
+  opacity: 0.6;
+  animation: pasillo-cursor 0.8s steps(1) infinite;
+}
+@keyframes pasillo-cursor { 50% { opacity: 0; } }
 
 @media (max-width: 720px) {
   .pasillo-habitaciones { padding: 4vh 0 4.5vh 0; }
@@ -364,6 +561,33 @@
 
 .dtf-window .win-body { padding: 10px; }
 
+/* flash blanco al sacar la foto (ver shutterBtn en el script) */
+.dtf-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s ease;
+}
+.dtf-flash.is-flashing { opacity: 0.85; transition: opacity 0.05s ease; }
+
+/* "inicializando cámara..." tipo terminal, entre permitir/continuar y
+   que arranque el feed de verdad */
+.dtf-cam-booting {
+  text-align: center;
+  font-size: 0.7rem;
+  color: #1C1C1A;
+  padding: 18px 4px;
+}
+.dtf-cam-booting[hidden] { display: none; }
+.dtf-cam-booting::after {
+  content: '▌';
+  margin-left: 2px;
+  animation: pasillo-cursor 0.8s steps(1) infinite;
+}
+
 .dtf-cam-permission { text-align: center; font-size: 0.68rem; line-height: 1.6; color: #1C1C1A; }
 .dtf-cam-permission button {
   display: block;
@@ -441,27 +665,72 @@
 }
 .dtf-storage-note[hidden] { display: none; }
 
-/* confirmación de guardado — ventanita modal, misma estética */
+/* confirmación de guardado — ventanita modal, misma estética.
+   Centrado real (grid + dvh + safe-area) y motion de apertura/cierre:
+   el overlay hace fade con blur de fondo, la ventana escala desde
+   0.9 con la barra de título entrando primero y el cuerpo después
+   (ver .is-open / transition-delay de cada pieza). */
 .dtf-confirm {
   position: fixed;
   inset: 0;
   z-index: 80;
-  background: rgba(20,18,15,0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5vh 5vw;
+  display: grid;
+  place-items: center;
+  padding:
+    max(5dvh, env(safe-area-inset-top))
+    max(5vw, env(safe-area-inset-right))
+    max(5dvh, env(safe-area-inset-bottom))
+    max(5vw, env(safe-area-inset-left));
+  background: rgba(20,18,15,0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  transition: background var(--dur-med) var(--ease-out), backdrop-filter var(--dur-med) var(--ease-out);
 }
 .dtf-confirm[hidden] { display: none; }
+.dtf-confirm.is-open {
+  background: rgba(20,18,15,0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
 
 .dtf-confirm-window {
   width: 260px;
   max-width: 86vw;
+  max-height: 90dvh;
+  overflow-y: auto;
   background: #D4D2C8;
   border: 1px solid #1C1C1A;
   box-shadow: 4px 4px 0 rgba(0,0,0,0.3);
   font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  transform: scale(0.9);
+  opacity: 0;
+  transition: transform var(--dur-med) var(--ease-out), opacity var(--dur-fast) ease;
 }
+.dtf-confirm.is-open .dtf-confirm-window {
+  transform: scale(1);
+  opacity: 1;
+}
+/* la barra de título "entra" un toque antes que el cuerpo */
+.dtf-confirm-window .win-titlebar {
+  opacity: 0;
+  transition: opacity var(--dur-fast) ease;
+}
+.dtf-confirm.is-open .dtf-confirm-window .win-titlebar { opacity: 1; }
+.dtf-confirm-window .win-body {
+  opacity: 0;
+  transition: opacity var(--dur-fast) ease;
+  transition-delay: 0.08s;
+}
+.dtf-confirm.is-open .dtf-confirm-window .win-body { opacity: 1; }
+/* stagger chico en los botones finales */
+.dtf-confirm-actions button {
+  opacity: 0;
+  translate: 0 6px;
+  transition: opacity var(--dur-fast) ease, translate var(--dur-fast) var(--ease-out);
+}
+.dtf-confirm.is-open .dtf-confirm-actions button { opacity: 1; translate: 0 0; }
+.dtf-confirm.is-open .dtf-confirm-actions button:nth-child(1) { transition-delay: 0.16s; }
+.dtf-confirm.is-open .dtf-confirm-actions button:nth-child(2) { transition-delay: 0.22s; }
 
 .dtf-preview-img {
   display: block;
