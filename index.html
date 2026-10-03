@@ -654,43 +654,11 @@
   (function () {
     var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // ---------- helper compartido: scramble/decode de texto ----------
-    // usado por el título de entrada y por las etiquetas del pasillo.
-    var SCRAMBLE_CHARS = 'abcdefghijklmnñopqrstuvwxyz*#%&+-/';
-    function scrambleText(el, finalText, duration, onDone) {
-      var startT = null;
-      var len = finalText.length;
-      function frame(ts) {
-        if (!startT) startT = ts;
-        var progress = Math.min(1, (ts - startT) / duration);
-        var resolvedCount = Math.floor(progress * len);
-        var out = '';
-        for (var i = 0; i < len; i++) {
-          if (finalText[i] === ' ') { out += ' '; continue; }
-          out += i < resolvedCount ? finalText[i] : SCRAMBLE_CHARS[(Math.random() * SCRAMBLE_CHARS.length) | 0];
-        }
-        el.textContent = out;
-        if (progress < 1) requestAnimationFrame(frame);
-        else { el.textContent = finalText; if (onDone) onDone(); }
-      }
-      requestAnimationFrame(frame);
-    }
-
-    // ---------- 1) entrada: título "mi casa" con decode + glitch RGB ----------
-    (function introTitle() {
-      var titleEl = document.querySelector('.site-title');
-      if (!titleEl || reduceMotion) return; // reduced-motion: queda como está, sin animar
-      var finalText = titleEl.textContent;
-      titleEl.classList.add('is-decoding');
-      scrambleText(titleEl, finalText, 650, function () {
-        titleEl.classList.remove('is-decoding');
-      });
-    })();
-    // los íconos (.room-png) y las frases (.frase-deco) ya tienen toda
-    // su entrada resuelta por CSS puro (ver home.css: mc-enter / mc-invitar
-    // / frase-dibujar con delays escalonados en el HTML) — no hace
-    // falta JS para esa parte, y así no dependen de que este script
-    // corra para no quedar invisibles.
+    // el título (.site-title) y las frases (.frase-deco) ya tienen toda
+    // su entrada resuelta por CSS puro (ver home.css: titulo-escribir /
+    // mc-enter / mc-invitar / frase-dibujar con delays escalonados en
+    // el HTML) — no hace falta JS para esa parte, y así no dependen de
+    // que este script corra para no quedar invisibles.
 
     // ---------- 2) home: parallax sutil del mouse (desktop, puntero fino) ----------
     (function parallax() {
@@ -725,33 +693,23 @@
       });
     })();
 
-    // ---------- 3) pasillo de habitaciones: reveal + boot CRT + tilt 3D
-    // + scramble de etiqueta + salida antes de navegar ----------
+    // ---------- 3) pasillo de habitaciones: reveal (mismo lenguaje que
+    // las frases) + salida antes de navegar ----------
     (function pasillo() {
       var rooms = document.querySelectorAll('.pasillo-room');
       if (!rooms.length) return;
-      var isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
 
       function openRoom(room, delay) {
         setTimeout(function () {
-          room.classList.add('is-booting'); // frame breve de wireframe/escaneo
-          setTimeout(function () {
-            room.classList.remove('is-booting');
-            room.classList.add('is-revealed');
-            var label = room.querySelector('.pasillo-room-label');
-            if (label) {
-              setTimeout(function () {
-                var text = label.dataset.label || label.textContent;
-                label.classList.add('is-typing');
-                scrambleText(label, text, 380, function () { label.classList.remove('is-typing'); });
-              }, 460);
-            }
-          }, reduceMotion ? 0 : 200);
+          var tilt = room.querySelector('.pasillo-tilt');
+          var label = room.querySelector('.pasillo-room-label');
+          if (tilt) tilt.classList.add('is-revealed');
+          if (label) label.classList.add('is-revealed');
         }, reduceMotion ? 0 : delay);
       }
 
       if (reduceMotion || !('IntersectionObserver' in window)) {
-        rooms.forEach(function (r, i) { openRoom(r, 0); });
+        rooms.forEach(function (r) { openRoom(r, 0); });
       } else {
         var io = new IntersectionObserver(function (entries) {
           entries.forEach(function (entry) {
@@ -760,33 +718,12 @@
             var idx = Array.prototype.indexOf.call(rooms, entry.target);
             openRoom(entry.target, Math.max(0, idx) * 100);
           });
-          // threshold 0 a propósito: el estado "cerrado" usa clip-path
-          // para colapsar la ventana a una tira finita en el medio, así
-          // que su área pintada real es mínima hasta que se revela —
-          // un threshold alto nunca se cumpliría (la tira ya cruza el
-          // viewport bastante antes de que la caja completa lo haga)
+          // threshold 0 a propósito: el estado "cerrado" usa mask-size
+          // para colapsar la ventana a una tira finita, así que su área
+          // pintada real es mínima hasta que se revela — un threshold
+          // alto nunca se cumpliría
         }, { threshold: 0, rootMargin: '0px 0px -10% 0px' });
         rooms.forEach(function (r) { io.observe(r); });
-      }
-
-      // tilt 3D siguiendo el mouse — solo con puntero fino; en touch el
-      // feedback es la compresión al tocar (CSS, @media pointer:coarse)
-      if (!reduceMotion && !isCoarsePointer) {
-        rooms.forEach(function (room) {
-          var inner = room.querySelector('.pasillo-tilt-inner');
-          if (!inner) return;
-          room.addEventListener('mousemove', function (e) {
-            var rect = room.getBoundingClientRect();
-            var nx = (e.clientX - rect.left) / rect.width - 0.5;
-            var ny = (e.clientY - rect.top) / rect.height - 0.5;
-            inner.style.setProperty('--tilt-ry', (nx * 7).toFixed(2) + 'deg');
-            inner.style.setProperty('--tilt-rx', (ny * -7).toFixed(2) + 'deg');
-          });
-          room.addEventListener('mouseleave', function () {
-            inner.style.setProperty('--tilt-rx', '0deg');
-            inner.style.setProperty('--tilt-ry', '0deg');
-          });
-        });
       }
 
       // salida corta (zoom+glitch) antes de navegar — respeta ctrl/cmd/
