@@ -660,6 +660,28 @@
     // el HTML) — no hace falta JS para esa parte, y así no dependen de
     // que este script corra para no quedar invisibles.
 
+    // ---------- 1.5) apagar la animación de entrada una vez que terminó
+    // ----------
+    // el hover (home.css: .hotspot:hover + .room-png) le pone
+    // "animation: none" a la ventana para que el agrandado no compita
+    // con el balanceo inicial (ambos animan "transform"). El problema:
+    // al sacar el mouse, CSS vuelve a aplicar la animación original
+    // (mc-enter + mc-invitar) desde cero, con su propio delay — y
+    // mc-enter arranca invisible (opacity:0) durante ese delay. Como el
+    // área con el mouse adentro de la ventana ya agrandada es más chica
+    // que el hotspot invisible de abajo, es fácil que el cursor entre y
+    // salga del hover sin querer, y cada salida reinicia la entrada:
+    // la ventana se ve "desaparecer" un rato. Una vez que la entrada +
+    // el balanceo ya jugaron una vez, los apagamos del todo (estilo
+    // inline, gana siempre) para que el hover nunca más los reinicie.
+    (function settleRoomPngs() {
+      document.querySelectorAll('.room-png').forEach(function (el) {
+        el.addEventListener('animationend', function (e) {
+          if (e.animationName === 'mc-invitar') el.style.animation = 'none';
+        });
+      });
+    })();
+
     // ---------- 2) home: parallax sutil del mouse (desktop, puntero fino) ----------
     (function parallax() {
       var houseWrap = document.querySelector('.house-wrap');
