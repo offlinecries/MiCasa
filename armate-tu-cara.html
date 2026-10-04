@@ -322,6 +322,39 @@
     overflow: auto;
   }
 
+  /* ---------- panel oculto para subir cabezas nuevas (?subir=1) ---------- */
+  #uploadPanel {
+    position: fixed;
+    left: 14px;
+    bottom: 14px;
+    z-index: 60;
+    width: 240px;
+    max-height: 82vh;
+    overflow-y: auto;
+    background: #1C1C1A;
+    color: #D4D2C8;
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    font-size: 0.68rem;
+    border: 1px solid #000;
+    padding: 10px;
+  }
+  #uploadPanel h3 { margin: 0 0 6px 0; font-size: 0.72rem; opacity: 0.9; }
+  #uploadPanel .upload-note { opacity: 0.65; line-height: 1.4; margin: 0 0 10px 0; }
+  #uploadPanel input[type="file"] {
+    display: block; width: 100%; font-size: 0.6rem; color: inherit; margin-bottom: 8px;
+  }
+  #uploadPreview {
+    display: block; max-width: 100%; max-height: 160px; margin-bottom: 8px;
+    border: 1px solid #444; object-fit: contain;
+  }
+  #uploadPreview[hidden] { display: none; }
+  #uploadPanel button {
+    width: 100%; background: #D4D2C8; color: #1C1C1A; border: 1px solid #000;
+    font-family: inherit; font-size: 0.68rem; padding: 7px 4px; cursor: inherit;
+  }
+  #uploadPanel button:disabled { opacity: 0.5; cursor: default; }
+  #uploadStatus { margin-top: 8px; opacity: 0.85; min-height: 1.2em; }
+
   /* ---------- galería de caras guardadas (abajo, compartida entre
      visitantes) — misma idea que "dejá tu foto" de la home: ventanas
      libres con --pos-x/--pos-y/--base-rotate/--pos-scale (persistidas),
@@ -613,6 +646,7 @@
 </div>
 
 <div id="devPanel" hidden></div>
+<div id="uploadPanel" hidden></div>
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -627,6 +661,12 @@
   ];
 
   var state = { cabeza: null, cejas: null, ojos: null, nariz: null, boca: null };
+  // si la cabeza elegida es una de las subidas por el panel ?subir=1 (una
+  // foto real, no uno de los 6 dibujos), acá queda su id — se usa para
+  // saber que NO hay que calcular posición con CABEZA_ANCHORS/parseIndex
+  // (esas fotos no tienen calibración propia, usan el valor por default)
+  // ni resaltar un data-index numérico en la miniatura.
+  state.cabezaCustomId = null;
 
   // la cabeza se compone con el PNG completo (define el ancho/alto del
   // contenedor), pero cejas/ojos/nariz/boca vienen con un margen
@@ -682,6 +722,131 @@
     btn.appendChild(img);
     btn.addEventListener('click', function () { selectPiece(cat, i, btn); });
     return btn;
+  }
+
+  // ---------- cabezas subidas desde el panel oculto (?subir=1) ----------
+  // fotos reales que se suman como opciones más en la fila de "cabezas",
+  // cargadas de Supabase (mismo proyecto que "dejá tu foto"/"caras
+  // guardadas", pero su propio bucket/tabla — ver supabase/setup.sql).
+  var CUSTOM_HEADS_BUCKET = 'custom-heads';
+  var CUSTOM_HEADS_TABLE = 'custom_heads';
+  var customHeadsClient = (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
+  function listCustomHeads() {
+    if (!customHeadsClient) return Promise.resolve([]);
+    return customHeadsClient.from(CUSTOM_HEADS_TABLE)
+      .select('id, image_url, created_at')
+      .order('created_at', { ascending: true })
+      .then(function (res) {
+        if (res.error) throw res.error;
+        return res.data || [];
+      }).catch(function () { return []; });
+  }
+
+  function uploadCustomHead(file) {
+    if (!customHeadsClient) return Promise.reject(new Error('sin conexión a Supabase'));
+    var ext = ((file.name || '').split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+    var path = 'cabeza-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) + '.' + ext;
+    return customHeadsClient.storage.from(CUSTOM_HEADS_BUCKET)
+      .upload(path, file, { contentType: file.type || 'image/jpeg', cacheControl: '31536000' })
+      .then(function (uploadRes) {
+        if (uploadRes.error) throw uploadRes.error;
+        var pub = customHeadsClient.storage.from(CUSTOM_HEADS_BUCKET).getPublicUrl(path);
+        var publicUrl = pub && pub.data ? pub.data.publicUrl : '';
+        return customHeadsClient.from(CUSTOM_HEADS_TABLE)
+          .insert({ image_url: publicUrl })
+          .select('id, image_url, created_at')
+          .single()
+          .then(function (insertRes) {
+            if (insertRes.error) throw insertRes.error;
+            return insertRes.data;
+          });
+      });
+  }
+
+  function selectCustomHead(head) {
+    state.cabeza = head.image_url;
+    state.cabezaCustomId = head.id;
+    refreshUI();
+    document.querySelectorAll('.thumb-btn[data-category="cabeza"][data-index="c' + head.id + '"]').forEach(function (btn) {
+      btn.classList.add('is-pop');
+      setTimeout(function () { btn.classList.remove('is-pop'); }, 320);
+    });
+  }
+
+  function makeCustomHeadBtn(head) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'thumb-btn';
+    btn.dataset.category = 'cabeza';
+    btn.dataset.index = 'c' + head.id;
+    var img = document.createElement('img');
+    img.src = head.image_url;
+    img.alt = 'cabeza subida';
+    btn.appendChild(img);
+    btn.addEventListener('click', function () { selectCustomHead(head); });
+    return btn;
+  }
+
+  function addCustomHeadButtons(heads) {
+    var desktopRow = document.querySelector('.shelf-row[data-row="cabeza"]');
+    var mobileStrip = document.querySelector('.row-mobile-strip[data-row="cabeza"]');
+    heads.forEach(function (head) {
+      if (!head || !head.image_url) return;
+      if (desktopRow) desktopRow.appendChild(makeCustomHeadBtn(head));
+      if (mobileStrip) mobileStrip.appendChild(makeCustomHeadBtn(head));
+    });
+  }
+
+  listCustomHeads().then(addCustomHeadButtons);
+
+  // ---------- panel oculto para subir cabezas nuevas (?subir=1) ----------
+  if (/[?&]subir=1\b/.test(location.search)) {
+    var uploadPanel = document.getElementById('uploadPanel');
+    uploadPanel.hidden = false;
+    uploadPanel.innerHTML =
+      '<h3>subir cabezas nuevas</h3>' +
+      '<p class="upload-note">se agregan para TODAS las visitas apenas se suben — no hay forma de sacarlas desde acá (si subís una por error, se borra desde el dashboard de Supabase).</p>' +
+      '<input type="file" id="uploadFileInput" accept="image/*">' +
+      '<img id="uploadPreview" hidden>' +
+      '<button id="uploadAddBtn" type="button" disabled>agregar</button>' +
+      '<div id="uploadStatus"></div>';
+
+    var fileInput = document.getElementById('uploadFileInput');
+    var preview = document.getElementById('uploadPreview');
+    var addBtn = document.getElementById('uploadAddBtn');
+    var statusEl = document.getElementById('uploadStatus');
+    var chosenFile = null;
+
+    fileInput.addEventListener('change', function () {
+      chosenFile = fileInput.files && fileInput.files[0];
+      if (chosenFile) {
+        preview.src = URL.createObjectURL(chosenFile);
+        preview.hidden = false;
+        addBtn.disabled = false;
+      } else {
+        preview.hidden = true;
+        addBtn.disabled = true;
+      }
+    });
+
+    addBtn.addEventListener('click', function () {
+      if (!chosenFile) return;
+      addBtn.disabled = true;
+      statusEl.textContent = 'subiendo...';
+      uploadCustomHead(chosenFile).then(function (head) {
+        statusEl.textContent = 'agregada — ya aparece en la fila de cabezas';
+        addCustomHeadButtons([head]);
+        fileInput.value = '';
+        chosenFile = null;
+        preview.hidden = true;
+      }).catch(function () {
+        statusEl.textContent = 'no se pudo subir — revisá tu conexión e intentá de nuevo.';
+        addBtn.disabled = false;
+      });
+    });
   }
 
   // ---------- posición dinámica de cada capa según la cabeza Y la
@@ -842,7 +1007,7 @@
   }
 
   function applyDynamicPositions() {
-    var cabezaIdx = state.cabeza ? parseIndex(state.cabeza) : null;
+    var cabezaIdx = (state.cabeza && !state.cabezaCustomId) ? parseIndex(state.cabeza) : null;
     var anchors = (cabezaIdx && CABEZA_ANCHORS[cabezaIdx]) ? CABEZA_ANCHORS[cabezaIdx] : DEFAULT_ANCHORS;
     // centro horizontal real de la cara de la cabeza elegida, llevado a
     // % del contenedor (--l:50% + width:HEAD_SCALE*100% de la cabeza)
@@ -873,6 +1038,9 @@
 
   function selectPiece(cat, i, sourceBtn) {
     state[cat.key] = fullPath(cat, i);
+    if (cat.key === 'cabeza') {
+      state.cabezaCustomId = null; // una de las 6 de siempre: ya no es la foto subida
+    }
     if (cat.key !== 'cabeza') {
       manualPos[cat.key] = null; // pieza nueva: arranca en la posición sugerida, no en la arrastrada antes
       maybeShowDragHint();
@@ -890,7 +1058,9 @@
     // resaltar la miniatura seleccionada de cada categoría (o ninguna si es null)
     CATEGORIES.forEach(function (cat) {
       var selectedIdx = null;
-      if (state[cat.key]) {
+      if (cat.key === 'cabeza' && state.cabezaCustomId) {
+        selectedIdx = 'c' + state.cabezaCustomId;
+      } else if (state[cat.key]) {
         var m = state[cat.key].match(/(\d+)\.png$/);
         if (m) selectedIdx = m[1];
       }
@@ -913,6 +1083,11 @@
       }
       if (img.getAttribute('src') !== path) {
         layerEl.classList.remove('is-visible');
+        // las cabezas subidas por ?subir=1 viven en Supabase Storage
+        // (otro origen) — sin crossOrigin, dibujarlas en el canvas de
+        // "sacar foto" ensucia el lienzo y toDataURL() tira un error
+        if (/^https?:\/\//.test(path)) img.crossOrigin = 'anonymous';
+        else img.removeAttribute('crossorigin');
         img.src = path;
       }
       // forzar reflow para que la transición de aparición se dispare siempre
@@ -929,6 +1104,7 @@
   }
 
   function resetFace() {
+    state.cabezaCustomId = null;
     CATEGORIES.forEach(function (cat) {
       state[cat.key] = null;
       if (cat.key !== 'cabeza') manualPos[cat.key] = null;
