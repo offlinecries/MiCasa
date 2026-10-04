@@ -188,6 +188,18 @@
   }
   .face-layer.is-visible { opacity: 1; transform: translateX(-50%) scale(1); }
   .face-layer img { display: block; width: 100%; height: auto; }
+  /* cejas/ojos/nariz/boca se pueden arrastrar una vez elegidas (la
+     cabeza no: es la base de todo lo demás) — ver makeLayerDraggable */
+  .face-layer:not([data-layer="cabeza"]).is-visible {
+    pointer-events: auto;
+    cursor: grab;
+    touch-action: none;
+  }
+  .face-layer.is-dragging {
+    cursor: grabbing;
+    z-index: 10;
+    transition: none; /* 1:1 con el mouse mientras se arrastra, sin el easing normal */
+  }
   /* el enunciado daba top:30/36/48/62 asumiendo que el dibujo arranca
      justo en el borde superior de cada PNG — en la práctica cada
      pieza tiene su propio margen transparente interno (bbox de alpha
@@ -310,6 +322,32 @@
     overflow: auto;
   }
 
+  /* ---------- aviso flotante (hint de arrastre, avisos de guardado) ---------- */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translateX(-50%) translateY(10px);
+    z-index: 40;
+    max-width: 86vw;
+    text-align: center;
+    background: #1C1C1A;
+    color: #D4D2C8;
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+    padding: 10px 16px;
+    border: 1px solid #000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  .toast.is-shown { opacity: 0.95; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 720px) {
+    .toast { bottom: 92px; } /* arriba de la barra fija de "umbrales" */
+  }
+
 </style>
 </head>
 <body>
@@ -348,6 +386,7 @@
   <div class="toolbar">
     <button id="btnRandom" type="button">[ aleatorizar ]</button>
     <button id="btnReset" type="button">[ reset ]</button>
+    <button id="btnCapture" type="button">[ sacar foto ]</button>
   </div>
 
   <!-- ---------- desktop / tablet: mueble + espejo completos ---------- -->
@@ -386,6 +425,7 @@
 </div>
 
 <div id="devPanel" hidden></div>
+<div class="toast" id="toast"></div>
 
 <script>
   var CATEGORIES = [
@@ -530,6 +570,87 @@
     return m ? parseInt(m[1], 10) : null;
   }
 
+  // ---------- aviso flotante reutilizable (hint de arrastre, avisos) ----------
+  var toastEl = document.getElementById('toast');
+  var toastTimer = null;
+  function showToast(text, duration) {
+    toastEl.textContent = text;
+    toastEl.classList.add('is-shown');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('is-shown'); }, duration || 4000);
+  }
+  function hideToast() {
+    toastEl.classList.remove('is-shown');
+    clearTimeout(toastTimer);
+  }
+
+  // ---------- posición manual (arrastre) ----------
+  // cejas/ojos/nariz/boca se pueden reacomodar a mano una vez puestas
+  // (la cabeza no: es la base). Mientras no se arrastró nada para una
+  // categoría, applyDynamicPositions() sigue calculando su lugar según
+  // la cabeza elegida (de arriba); en cuanto se arrastra, esa posición
+  // puntual pisa el cálculo hasta que se elija otra pieza para esa
+  // categoría o se haga reset.
+  var manualPos = { cejas: null, ojos: null, nariz: null, boca: null };
+  var DRAG_MIN = -20, DRAG_MAX = 120;
+  function clampDrag(v) { return Math.min(DRAG_MAX, Math.max(DRAG_MIN, v)); }
+
+  function applyManualPos(key, t, l) {
+    document.querySelectorAll('.face-layer[data-layer="' + key + '"]').forEach(function (el) {
+      el.style.setProperty('--t', t + '%');
+      el.style.setProperty('--l', l + '%');
+    });
+  }
+
+  var dragHintShown = false;
+  function maybeShowDragHint() {
+    if (dragHintShown) return;
+    dragHintShown = true;
+    showToast('podés arrastrar las piezas para acomodarlas en la cara', 5000);
+  }
+
+  function makeLayerDraggable(layerEl) {
+    var key = layerEl.dataset.layer;
+    if (key === 'cabeza') return; // la base no se mueve
+    var dragId = null, startClientX = 0, startClientY = 0, startL = 50, startT = 0;
+
+    layerEl.addEventListener('pointerdown', function (e) {
+      if (!state[key]) return; // todavía no hay nada elegido ahí: nada que arrastrar
+      hideToast();
+      var container = layerEl.parentElement; // .mirror-face / .mirror-face-mobile
+      dragId = e.pointerId;
+      startClientX = e.clientX;
+      startClientY = e.clientY;
+      var cs = getComputedStyle(layerEl);
+      startL = parseFloat(cs.getPropertyValue('--l')) || 50;
+      startT = parseFloat(cs.getPropertyValue('--t')) || 0;
+      layerEl.classList.add('is-dragging');
+      layerEl.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    layerEl.addEventListener('pointermove', function (e) {
+      if (dragId !== e.pointerId) return;
+      var rect = layerEl.parentElement.getBoundingClientRect();
+      var newL = clampDrag(startL + (e.clientX - startClientX) / rect.width * 100);
+      var newT = clampDrag(startT + (e.clientY - startClientY) / rect.height * 100);
+      applyManualPos(key, newT, newL);
+    });
+
+    function endDrag(e) {
+      if (dragId !== e.pointerId) return;
+      dragId = null;
+      layerEl.classList.remove('is-dragging');
+      var cs = getComputedStyle(layerEl);
+      manualPos[key] = {
+        t: parseFloat(cs.getPropertyValue('--t')) || 0,
+        l: parseFloat(cs.getPropertyValue('--l')) || 50
+      };
+    }
+    layerEl.addEventListener('pointerup', endDrag);
+    layerEl.addEventListener('pointercancel', endDrag);
+  }
+
   function applyDynamicPositions() {
     var cabezaIdx = state.cabeza ? parseIndex(state.cabeza) : null;
     var anchors = (cabezaIdx && CABEZA_ANCHORS[cabezaIdx]) ? CABEZA_ANCHORS[cabezaIdx] : DEFAULT_ANCHORS;
@@ -542,19 +663,30 @@
       if (!state[key]) return;
       var idx = parseIndex(state[key]);
       if (!idx) return;
-      var aspect = FEATURE_ASPECT[key][idx - 1];
       var w = FEATURE_WIDTH[key];
-      var t = anchors[key] - 0.5 * w * aspect * R_CONTAINER;
+      var t, l;
+      if (manualPos[key]) {
+        t = manualPos[key].t;
+        l = manualPos[key].l;
+      } else {
+        var aspect = FEATURE_ASPECT[key][idx - 1];
+        t = anchors[key] - 0.5 * w * aspect * R_CONTAINER;
+        l = centerX;
+      }
       document.querySelectorAll('.face-layer[data-layer="' + key + '"]').forEach(function (el) {
         el.style.setProperty('--t', t + '%');
         el.style.setProperty('--w', w + '%');
-        el.style.setProperty('--l', centerX + '%');
+        el.style.setProperty('--l', l + '%');
       });
     });
   }
 
   function selectPiece(cat, i, sourceBtn) {
     state[cat.key] = fullPath(cat, i);
+    if (cat.key !== 'cabeza') {
+      manualPos[cat.key] = null; // pieza nueva: arranca en la posición sugerida, no en la arrastrada antes
+      maybeShowDragHint();
+    }
     refreshUI();
 
     // feedback: "pop" en todos los botones de esa pieza (desktop + mobile)
@@ -607,12 +739,61 @@
   }
 
   function resetFace() {
-    CATEGORIES.forEach(function (cat) { state[cat.key] = null; });
+    CATEGORIES.forEach(function (cat) {
+      state[cat.key] = null;
+      if (cat.key !== 'cabeza') manualPos[cat.key] = null;
+    });
     refreshUI();
   }
 
+  document.querySelectorAll('.face-layer[data-layer]').forEach(makeLayerDraggable);
+
   document.getElementById('btnRandom').addEventListener('click', randomize);
   document.getElementById('btnReset').addEventListener('click', resetFace);
+
+  // ---------- sacar foto: compone cabeza + piezas elegidas (en orden
+  // real de z-index, no el de las categorías) en un canvas aparte y
+  // descarga el PNG resultante — fondo transparente, solo la cara ----------
+  document.getElementById('btnCapture').addEventListener('click', function () {
+    if (!state.cabeza) {
+      showToast('elegí al menos una cabeza primero', 2500);
+      return;
+    }
+    var canvasW = 960;
+    var canvasH = Math.round(canvasW / R_CONTAINER);
+    var canvas = document.createElement('canvas');
+    canvas.width = canvasW;
+    canvas.height = canvasH;
+    var ctx = canvas.getContext('2d');
+
+    ['cabeza', 'nariz', 'boca', 'ojos', 'cejas'].forEach(function (key) {
+      if (!state[key]) return;
+      var layerEl = document.querySelector('#mirrorFaceDesktop .face-layer[data-layer="' + key + '"]');
+      var img = layerEl && layerEl.querySelector('img');
+      if (!img || !img.naturalWidth) return;
+      var cs = getComputedStyle(layerEl);
+      var t = parseFloat(cs.getPropertyValue('--t')) || 0;
+      var l = parseFloat(cs.getPropertyValue('--l')) || 50;
+      var w = parseFloat(cs.getPropertyValue('--w')) || 100;
+      var widthPx = w / 100 * canvasW;
+      var heightPx = widthPx * (img.naturalHeight / img.naturalWidth);
+      var xPx = (l / 100 * canvasW) - widthPx / 2;
+      var yPx = t / 100 * canvasH;
+      ctx.drawImage(img, xPx, yPx, widthPx, heightPx);
+    });
+
+    var a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = 'mi-cara.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    var btn = document.getElementById('btnCapture');
+    var original = btn.textContent;
+    btn.textContent = '[ ✓ guardada ]';
+    setTimeout(function () { btn.textContent = original; }, 1400);
+  });
 
   // ---------- modo dev: ?dev=1 — sliders para calibrar top/left/width
   // de cada capa a ojo, y un botón para copiar los valores finales ----------
