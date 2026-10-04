@@ -1,5 +1,6 @@
 /*
- * photo-store.js — dónde viven las fotos de "Dejá tu foto".
+ * photo-store.js — dónde viven las fotos de "Dejá tu foto" (y, con otro
+ * bucket/tabla, las caras de "Armá tu cara").
  *
  * Storage compartido entre TODOS los visitantes, vía Supabase
  * (Storage + tabla Postgres). Este proyecto es un sitio estático sin
@@ -17,40 +18,44 @@
  * PASOS EN SUPABASE (una sola vez, antes de completar las constantes):
  *   1. Crear un proyecto gratis en https://supabase.com
  *   2. Abrir el SQL Editor del proyecto y ejecutar el script que está
- *      en supabase/setup.sql (crea el bucket público "visitor-photos",
- *      la tabla "visitor_photos", sus columnas de posición (x, y,
- *      rotation, scale), las policies —cualquiera puede leer, subir y
- *      mover una foto, nadie puede borrar ni tocar nombre/imagen ajenos—
- *      y habilita Realtime en esa tabla). Si ya lo habías corrido antes
- *      de que existiera la parte de posiciones, volvé a correrlo
- *      entero: es seguro, no rompe nada de lo que ya existía.
+ *      en supabase/setup.sql (crea los buckets públicos "visitor-photos"
+ *      y "visitor-faces", las tablas "visitor_photos"/"visitor_faces",
+ *      sus columnas de posición (x, y, rotation, scale), las policies
+ *      —cualquiera puede leer, subir y mover una foto, nadie puede
+ *      borrar ni tocar nombre/imagen ajenos— y habilita Realtime en
+ *      ambas). Si ya lo habías corrido antes de que existiera alguna
+ *      parte, volvé a correrlo entero: es seguro, no rompe nada de lo
+ *      que ya existía.
  *   3. Ir a Project Settings > API y copiar:
  *        - "Project URL"      -> SUPABASE_URL
  *        - "anon public" key  -> SUPABASE_ANON_KEY
  *      (la "service_role" NO se toca acá).
  *   4. Pegar esos dos valores abajo. Con eso, esta misma página empieza
- *      a guardar y mostrar las fotos de todos los visitantes.
+ *      a guardar y mostrar las fotos/caras de todos los visitantes.
  *
- * Mientras estas dos constantes estén vacías, PhotoStore sigue
- * funcionando con localStorage (privado de este navegador) para que
- * la función se pueda probar, y la página lo avisa honestamente. En
- * ese modo local, updatePosition() guarda en localStorage no más, y
- * subscribePositions() no hace nada (no hay con quién sincronizar).
+ * Mientras estas dos constantes estén vacías, cada PhotoStore sigue
+ * funcionando con localStorage (privado de este navegador, una clave
+ * propia por colección) para que la función se pueda probar, y la
+ * página lo avisa honestamente. En ese modo local, updatePosition()
+ * guarda en localStorage no más, y subscribePositions() no hace nada
+ * (no hay con quién sincronizar).
  */
 var SUPABASE_URL = 'https://xbzfqsmjgyxfndsmbrsl.supabase.co';
 var SUPABASE_ANON_KEY = 'sb_publishable_2VZX5k8PsfKa4SfFeXsf3Q_d_Y8QpyF';
 
-var PhotoStore = (function () {
-  var LOCAL_KEY = 'mi-casa-deja-tu-foto';
-  var BUCKET = 'visitor-photos';
-  var TABLE = 'visitor_photos';
-
+// createPhotoStore(bucket, table, localKey) — una "colección" completa
+// (dejá tu foto, armá tu cara, o cualquier otra futura) es un bucket +
+// una tabla propios, con exactamente la misma forma de guardar/listar/
+// mover/sincronizar. El bucket/tabla elegidos tienen que existir en
+// Supabase (ver supabase/setup.sql) para que el modo remoto funcione;
+// si no, cada colección cae sola a su propio localStorage.
+function createPhotoStore(bucket, table, localKey) {
   var remoteEnabled = !!(SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase);
   var client = remoteEnabled ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
   function localList() {
     try {
-      return JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]');
+      return JSON.parse(localStorage.getItem(localKey) || '[]');
     } catch (e) {
       return [];
     }
@@ -60,7 +65,7 @@ var PhotoStore = (function () {
     var list = localList();
     list.unshift(photo); // más reciente primero, igual que el modo remoto
     try {
-      localStorage.setItem(LOCAL_KEY, JSON.stringify(list));
+      localStorage.setItem(localKey, JSON.stringify(list));
     } catch (e) { /* localStorage lleno o bloqueado: la foto solo queda en memoria de esta sesión */ }
     return Promise.resolve(photo);
   }
@@ -99,7 +104,7 @@ var PhotoStore = (function () {
     list: function () {
       if (remoteEnabled) {
         return client
-          .from(TABLE)
+          .from(table)
           .select('id, filename, image_url, created_at, x, y, rotation, scale')
           .order('created_at', { ascending: false })
           .then(function (res) {
@@ -107,7 +112,7 @@ var PhotoStore = (function () {
             return (res.data || []).map(function (row) {
               return {
                 id: row.id,
-                name: row.filename.replace(/\.jpg$/i, ''),
+                name: row.filename.replace(/\.(jpg|png)$/i, ''),
                 image: row.image_url,
                 created_at: row.created_at,
                 x: row.x, y: row.y, rotation: row.rotation, scale: row.scale
@@ -121,24 +126,28 @@ var PhotoStore = (function () {
     // position = { x, y, rotation, scale } — posición inicial elegida
     // por quien llama (el HTML sabe el tamaño real del espacio; acá
     // solo se persiste tal cual, compartida para todos los visitantes)
-    save: function (rawName, dataURL, position) {
+    // ext = extensión real del archivo ("jpg" o "png"; default "jpg"
+    // para no romper la colección existente de "dejá tu foto")
+    save: function (rawName, dataURL, position, ext) {
+      var fileExt = ext || 'jpg';
+      var mime = fileExt === 'png' ? 'image/png' : 'image/jpeg';
       var displayName = sanitizeDisplayName(rawName);
       var pos = position || {};
       var createdAt = new Date().toISOString();
 
       if (remoteEnabled) {
-        var storagePath = slugify(displayName) + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) + '.jpg';
+        var storagePath = slugify(displayName) + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) + '.' + fileExt;
         var blob = dataURLToBlob(dataURL);
 
-        return client.storage.from(BUCKET)
-          .upload(storagePath, blob, { contentType: 'image/jpeg', cacheControl: '31536000' })
+        return client.storage.from(bucket)
+          .upload(storagePath, blob, { contentType: mime, cacheControl: '31536000' })
           .then(function (uploadRes) {
             if (uploadRes.error) throw uploadRes.error;
-            var pub = client.storage.from(BUCKET).getPublicUrl(storagePath);
+            var pub = client.storage.from(bucket).getPublicUrl(storagePath);
             var publicUrl = pub && pub.data ? pub.data.publicUrl : '';
-            return client.from(TABLE)
+            return client.from(table)
               .insert({
-                filename: displayName + '.jpg',
+                filename: displayName + '.' + fileExt,
                 image_url: publicUrl,
                 x: pos.x, y: pos.y, rotation: pos.rotation, scale: pos.scale
               })
@@ -172,7 +181,7 @@ var PhotoStore = (function () {
     // el grant de columnas en supabase/setup.sql.
     updatePosition: function (id, patch) {
       if (remoteEnabled) {
-        return client.from(TABLE).update(patch).eq('id', id).then(function (res) {
+        return client.from(table).update(patch).eq('id', id).then(function (res) {
           if (res.error) throw res.error;
         });
       }
@@ -180,7 +189,7 @@ var PhotoStore = (function () {
       var found = list.filter(function (p) { return p.id === id; })[0];
       if (found) {
         for (var key in patch) { if (patch.hasOwnProperty(key)) found[key] = patch[key]; }
-        try { localStorage.setItem(LOCAL_KEY, JSON.stringify(list)); } catch (e) {}
+        try { localStorage.setItem(localKey, JSON.stringify(list)); } catch (e) {}
       }
       return Promise.resolve();
     },
@@ -191,12 +200,14 @@ var PhotoStore = (function () {
     subscribePositions: function (onUpdate) {
       if (!remoteEnabled) return function () {};
       var channel = client
-        .channel('visitor_photos_positions')
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: TABLE }, function (payload) {
+        .channel(table + '_positions')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: table }, function (payload) {
           onUpdate(payload.new);
         })
         .subscribe();
       return function () { client.removeChannel(channel); };
     }
   };
-})();
+}
+
+var PhotoStore = createPhotoStore('visitor-photos', 'visitor_photos', 'mi-casa-deja-tu-foto');

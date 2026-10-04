@@ -322,6 +322,168 @@
     overflow: auto;
   }
 
+  /* ---------- galería de caras guardadas (abajo, compartida entre
+     visitantes) — misma idea que "dejá tu foto" de la home: ventanas
+     libres con --pos-x/--pos-y/--base-rotate/--pos-scale (persistidas),
+     más un balanceo ambiental sutil y propio de cada una (--float-*,
+     solo visual, nunca se guarda) ---------- */
+  .caras-section {
+    position: relative;
+    z-index: 2;
+    background: #cac8c0;
+    padding: 8vh 6vw 10vh 6vw;
+    margin-top: 6vh;
+  }
+  .caras-title {
+    font-family: 'Cardinal', serif;
+    font-size: 2rem;
+    color: var(--ink);
+    opacity: 0.9;
+    text-align: center;
+  }
+  .caras-hint {
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    font-size: 0.68rem;
+    color: var(--mist);
+    letter-spacing: 0.02em;
+    text-align: center;
+    margin: 8px 0 5vh 0;
+  }
+  .caras-collection {
+    position: relative;
+    width: 100%;
+    max-width: 1000px;
+    min-height: 70vh;
+    margin: 0 auto;
+  }
+  .caras-empty {
+    position: absolute;
+    top: 6%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    font-size: 0.7rem;
+    color: var(--mist);
+    opacity: 0.7;
+    white-space: nowrap;
+  }
+  .caras-empty[hidden] { display: none; }
+
+  .cara-window {
+    position: absolute;
+    left: var(--pos-x, 0%);
+    top: var(--pos-y, 0%);
+    scale: var(--pos-scale, 1);
+    transform-origin: top left;
+    width: 190px;
+    max-width: 60vw;
+    background: #D4D2C8;
+    border: 1px solid #1C1C1A;
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.22);
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    animation: cara-float var(--float-dur, 11s) ease-in-out infinite;
+    animation-delay: var(--float-delay, 0s);
+  }
+  @keyframes cara-float {
+    0%, 100% { translate: 0px 0px; rotate: var(--base-rotate, 0deg); }
+    50% { translate: var(--float-dx, 0px) var(--float-dy, 0px); rotate: calc(var(--base-rotate, 0deg) + var(--float-drot, 0deg)); }
+  }
+  .cara-window.is-dragging { z-index: 15; animation-play-state: paused; }
+  .cara-window.is-remote-moving { transition: left 0.4s ease, top 0.4s ease; }
+
+  .cara-window .win-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #1C1C1A;
+    color: #D4D2C8;
+    padding: 5px 6px 5px 8px;
+    font-size: 0.68rem;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: move;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .cara-window .win-body { padding: 8px; }
+  .cara-window .win-body img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  @media (max-width: 720px) {
+    .caras-section { padding: 6vh 6vw 9vh 6vw; }
+    .caras-title { font-size: 1.7rem; }
+    .caras-collection { min-height: 56vh; }
+    .cara-window { width: 62%; }
+  }
+
+  /* ---------- modal de guardar la cara (preview + nombre) ---------- */
+  .cara-confirm {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    place-items: center;
+    padding: 5dvh 5vw;
+    background: rgba(20,18,15,0.55);
+  }
+  .cara-confirm[hidden] { display: none; }
+  .cara-confirm-window {
+    width: 260px;
+    max-width: 86vw;
+    max-height: 90dvh;
+    overflow-y: auto;
+    background: #D4D2C8;
+    border: 1px solid #1C1C1A;
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.3);
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  }
+  .cara-confirm-window .win-titlebar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #1C1C1A; color: #D4D2C8; padding: 5px 6px 5px 8px;
+    font-size: 0.72rem; letter-spacing: 0.04em;
+  }
+  .cara-confirm-window .win-btn {
+    width: 15px; height: 15px; padding: 0;
+    background: #D4D2C8; color: #1C1C1A; border: 1px solid #1C1C1A;
+    font-family: inherit; font-size: 0.68rem; line-height: 1;
+    display: flex; align-items: center; justify-content: center; cursor: inherit;
+  }
+  .cara-confirm-window .win-body { padding: 10px; }
+  .cara-confirm-preview {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 46vh;
+    object-fit: contain;
+    background: repeating-conic-gradient(#e4e2da 0% 25%, #D4D2C8 0% 50%) 0 / 14px 14px;
+    border: 1px solid #1C1C1A;
+  }
+  .cara-name-input {
+    display: block; width: 100%; margin-top: 8px;
+    background: #fff; border: 1px solid #1C1C1A; padding: 8px;
+    font-family: inherit; font-size: 0.78rem; color: #1C1C1A; box-sizing: border-box;
+  }
+  .cara-name-input:focus { outline: 2px solid #1C1C1A; outline-offset: 1px; }
+  .cara-save-status {
+    margin-top: 8px; font-size: 0.64rem; letter-spacing: 0.03em;
+    text-align: center; color: #1C1C1A; opacity: 0.75;
+  }
+  .cara-save-status[data-error="true"] { color: #7a1f1f; opacity: 0.9; }
+  .cara-save-status[hidden] { display: none; }
+  .cara-confirm-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .cara-confirm-actions button {
+    flex: 1; background: #D4D2C8; border: 1px solid #1C1C1A;
+    padding: 10px 4px; font-family: inherit; font-size: 0.68rem;
+    letter-spacing: 0.03em; cursor: inherit;
+  }
+  .cara-confirm-actions button:active { background: #bcbab0; }
+  .cara-confirm-actions button:disabled { opacity: 0.55; cursor: default; }
+
   /* ---------- aviso flotante (hint de arrastre, avisos de guardado) ---------- */
   .toast {
     position: fixed;
@@ -424,9 +586,37 @@
   <div class="rows-mobile" id="rowsMobile"></div>
 </div>
 
+<section class="caras-section">
+  <div class="caras-title">caras guardadas</div>
+  <div class="caras-hint">las caras de todas las visitas, una al lado de la otra — arrastralas como quieras</div>
+  <div class="caras-collection" id="carasCollection">
+    <div class="caras-empty" id="carasEmpty">todavía no hay ninguna — armá la tuya y guardala</div>
+  </div>
+</section>
+
+<div class="cara-confirm" id="caraConfirm" hidden>
+  <div class="cara-confirm-window">
+    <div class="win-titlebar">
+      <span>GUARDAR.EXE</span>
+      <button class="win-btn" id="caraConfirmClose" type="button" aria-label="cerrar">x</button>
+    </div>
+    <div class="win-body">
+      <img id="caraPreviewImg" alt="" class="cara-confirm-preview">
+      <input type="text" id="caraNameInput" class="cara-name-input" placeholder="nombre_de_archivo" maxlength="24">
+      <div class="cara-save-status" id="caraSaveStatus" hidden></div>
+      <div class="cara-confirm-actions">
+        <button id="caraDownload" type="button">descargar</button>
+        <button id="caraSave" type="button">guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="devPanel" hidden></div>
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/js/photo-store.js?v=3"></script>
 <script>
   var CATEGORIES = [
     { key: 'cabeza', label: 'cabezas', folder: 'cabezas 2', thumbFolder: 'cabezas', prefix: 'cabeza', count: 6 },
@@ -752,13 +942,10 @@
   document.getElementById('btnReset').addEventListener('click', resetFace);
 
   // ---------- sacar foto: compone cabeza + piezas elegidas (en orden
-  // real de z-index, no el de las categorías) en un canvas aparte y
-  // descarga el PNG resultante — fondo transparente, solo la cara ----------
-  document.getElementById('btnCapture').addEventListener('click', function () {
-    if (!state.cabeza) {
-      showToast('elegí al menos una cabeza primero', 2500);
-      return;
-    }
+  // real de z-index, no el de las categorías) en un canvas aparte,
+  // fondo transparente, solo la cara — y abre GUARDAR.EXE para
+  // descargarla y/o mandarla a la galería compartida de abajo ----------
+  function composeFaceDataURL() {
     var canvasW = 960;
     var canvasH = Math.round(canvasW / R_CONTAINER);
     var canvas = document.createElement('canvas');
@@ -782,18 +969,264 @@
       ctx.drawImage(img, xPx, yPx, widthPx, heightPx);
     });
 
+    return canvas.toDataURL('image/png');
+  }
+
+  var caraConfirmBox = document.getElementById('caraConfirm');
+  var caraConfirmClose = document.getElementById('caraConfirmClose');
+  var caraPreviewImg = document.getElementById('caraPreviewImg');
+  var caraNameInput = document.getElementById('caraNameInput');
+  var caraDownloadBtn = document.getElementById('caraDownload');
+  var caraSaveBtn = document.getElementById('caraSave');
+  var caraSaveStatus = document.getElementById('caraSaveStatus');
+  var pendingFaceCapture = null;
+
+  document.getElementById('btnCapture').addEventListener('click', function () {
+    if (!state.cabeza) {
+      showToast('elegí al menos una cabeza primero', 2500);
+      return;
+    }
+    pendingFaceCapture = composeFaceDataURL();
+    caraPreviewImg.src = pendingFaceCapture;
+    caraNameInput.value = '';
+    caraSaveStatus.hidden = true;
+    caraConfirmBox.hidden = false;
+    setTimeout(function () { caraNameInput.focus(); }, 50);
+  });
+
+  function closeCaraConfirm() {
+    caraConfirmBox.hidden = true;
+    pendingFaceCapture = null;
+  }
+  caraConfirmClose.addEventListener('click', closeCaraConfirm);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !caraConfirmBox.hidden) closeCaraConfirm();
+  });
+
+  caraDownloadBtn.addEventListener('click', function () {
+    if (!pendingFaceCapture) return;
     var a = document.createElement('a');
-    a.href = canvas.toDataURL('image/png');
-    a.download = 'mi-cara.png';
+    a.href = pendingFaceCapture;
+    a.download = (caraNameInput.value.trim() || 'mi-cara') + '.png';
     document.body.appendChild(a);
     a.click();
     a.remove();
-
-    var btn = document.getElementById('btnCapture');
-    var original = btn.textContent;
-    btn.textContent = '[ ✓ guardada ]';
-    setTimeout(function () { btn.textContent = original; }, 1400);
   });
+
+  // ---------- galería compartida de caras guardadas (misma idea que
+  // "dejá tu foto" de la home: posiciones libres por %, compartidas
+  // entre visitantes vía Supabase, más un balanceo ambiental propio de
+  // cada una que nunca se guarda) ----------
+  var FaceStore = (typeof createPhotoStore === 'function')
+    ? createPhotoStore('visitor-faces', 'visitor_faces', 'mi-casa-armar-cara')
+    : null;
+  var carasCollection = document.getElementById('carasCollection');
+  var carasEmpty = document.getElementById('carasEmpty');
+  var knownCaraPositions = [];
+
+  function round2(n) { return Math.round(n * 100) / 100; }
+
+  function clampPercent(valuePct, itemPx, containerPx) {
+    if (!containerPx) return 0;
+    var itemPct = itemPx / containerPx * 100;
+    var maxPct = Math.max(0, 100 - itemPct);
+    return Math.min(Math.max(0, valuePct), maxPct);
+  }
+
+  function updateKnownCaraPosition(id, x, y) {
+    var found = knownCaraPositions.filter(function (p) { return p.id === id; })[0];
+    if (found) { found.x = x; found.y = y; }
+    else knownCaraPositions.push({ id: id, x: x, y: y });
+  }
+
+  function pickCaraInitialPosition() {
+    var rect = carasCollection.getBoundingClientRect();
+    var scale = round2(0.92 + Math.random() * 0.16); // entre 0.92 y 1.08
+    var isMobileWidth = window.innerWidth <= 720;
+    var baseItemW = isMobileWidth ? rect.width * 0.62 : 190;
+    var itemW = (baseItemW + 4) * scale;
+    var itemH = itemW * 1.1;
+    var itemWPct = itemW / rect.width * 100;
+    var itemHPct = itemH / rect.height * 100;
+
+    var best = null, bestDist = -1;
+    for (var attempt = 0; attempt < 20; attempt++) {
+      var xPct = clampPercent(Math.random() * 100, itemW, rect.width);
+      var yPct = clampPercent(Math.random() * 100, itemH, rect.height);
+      if (knownCaraPositions.length === 0) { best = { x: xPct, y: yPct }; break; }
+      var minDist = Infinity;
+      knownCaraPositions.forEach(function (p) {
+        var dx = p.x - xPct, dy = p.y - yPct;
+        var d = Math.sqrt(dx * dx + dy * dy);
+        if (d < minDist) minDist = d;
+      });
+      if (minDist > bestDist) { bestDist = minDist; best = { x: xPct, y: yPct }; }
+      if (minDist > 18) break;
+    }
+    if (!best) best = { x: 0, y: 0 };
+
+    return {
+      x: round2(best.x),
+      y: round2(best.y),
+      rotation: round2(Math.random() * 14 - 7),
+      scale: scale
+    };
+  }
+
+  function applyFloatBehavior(tile) {
+    var kind = Math.floor(Math.random() * 4);
+    var dx = 0, dy = 0, drot = 0, dur = 9 + Math.random() * 5;
+    if (kind === 0) {
+      dx = (Math.random() < 0.5 ? -1 : 1) * (3 + Math.random() * 3);
+      dy = (Math.random() < 0.5 ? -1 : 1) * (2 + Math.random() * 2);
+    } else if (kind === 1) {
+      drot = (Math.random() < 0.5 ? -1 : 1) * (1 + Math.random() * 1.3);
+    } else if (kind === 2) {
+      dx = (Math.random() < 0.5 ? -1 : 1) * (2 + Math.random() * 2.5);
+    } else {
+      dx = 1; dy = -1; dur = 15 + Math.random() * 5;
+    }
+    tile.style.setProperty('--float-dx', dx.toFixed(2) + 'px');
+    tile.style.setProperty('--float-dy', dy.toFixed(2) + 'px');
+    tile.style.setProperty('--float-drot', drot.toFixed(2) + 'deg');
+    tile.style.setProperty('--float-dur', dur.toFixed(2) + 's');
+    tile.style.setProperty('--float-delay', (Math.random() * 4).toFixed(2) + 's');
+  }
+
+  function applyCaraPosition(tile, pos) {
+    tile.style.setProperty('--pos-x', (pos.x || 0) + '%');
+    tile.style.setProperty('--pos-y', (pos.y || 0) + '%');
+    tile.style.setProperty('--pos-scale', pos.scale != null ? pos.scale : 1);
+    tile.style.setProperty('--base-rotate', (pos.rotation != null ? pos.rotation : 0) + 'deg');
+  }
+
+  function makeCaraDraggable(windowEl) {
+    var titlebar = windowEl.querySelector('.win-titlebar');
+    if (!titlebar) return;
+    var dragPointerId = null, startClientX = 0, startClientY = 0, startXPct = 0, startYPct = 0;
+    titlebar.style.touchAction = 'none';
+
+    titlebar.addEventListener('pointerdown', function (e) {
+      var collRect = carasCollection.getBoundingClientRect();
+      var winRect = windowEl.getBoundingClientRect();
+      startXPct = (winRect.left - collRect.left) / collRect.width * 100;
+      startYPct = (winRect.top - collRect.top) / collRect.height * 100;
+      startClientX = e.clientX;
+      startClientY = e.clientY;
+      dragPointerId = e.pointerId;
+      windowEl.classList.remove('is-remote-moving');
+      windowEl.classList.add('is-dragging');
+      titlebar.setPointerCapture(e.pointerId);
+    });
+
+    titlebar.addEventListener('pointermove', function (e) {
+      if (dragPointerId !== e.pointerId) return;
+      var collRect = carasCollection.getBoundingClientRect();
+      var scale = parseFloat(windowEl.style.getPropertyValue('--pos-scale')) || 1;
+      var effW = windowEl.offsetWidth * scale;
+      var effH = windowEl.offsetHeight * scale;
+      var dxPct = (e.clientX - startClientX) / collRect.width * 100;
+      var dyPct = (e.clientY - startClientY) / collRect.height * 100;
+      var xPct = clampPercent(startXPct + dxPct, effW, collRect.width);
+      var yPct = clampPercent(startYPct + dyPct, effH, collRect.height);
+      windowEl.style.setProperty('--pos-x', xPct + '%');
+      windowEl.style.setProperty('--pos-y', yPct + '%');
+    });
+
+    titlebar.addEventListener('pointerup', function (e) {
+      if (dragPointerId !== e.pointerId) return;
+      dragPointerId = null;
+      windowEl.classList.remove('is-dragging');
+      var faceId = windowEl.dataset.faceId;
+      if (!faceId || !FaceStore) return;
+      var xPct = round2(parseFloat(windowEl.style.getPropertyValue('--pos-x')) || 0);
+      var yPct = round2(parseFloat(windowEl.style.getPropertyValue('--pos-y')) || 0);
+      updateKnownCaraPosition(faceId, xPct, yPct);
+      FaceStore.updatePosition(faceId, { x: xPct, y: yPct }).catch(function () {});
+    });
+  }
+
+  function addCaraTile(face) {
+    carasEmpty.hidden = true;
+    var tile = document.createElement('div');
+    tile.className = 'cara-window';
+    tile.dataset.faceId = face.id;
+    applyCaraPosition(tile, face);
+    applyFloatBehavior(tile);
+
+    var titlebar = document.createElement('div');
+    titlebar.className = 'win-titlebar';
+    var titleSpan = document.createElement('span');
+    titleSpan.textContent = face.name + '.png';
+    titlebar.appendChild(titleSpan);
+
+    var body = document.createElement('div');
+    body.className = 'win-body';
+    var img = document.createElement('img');
+    img.src = face.image;
+    img.alt = face.name;
+    body.appendChild(img);
+
+    tile.appendChild(titlebar);
+    tile.appendChild(body);
+    carasCollection.appendChild(tile);
+    makeCaraDraggable(tile);
+  }
+
+  caraSaveBtn.addEventListener('click', function () {
+    if (!pendingFaceCapture || !FaceStore) return;
+    caraSaveBtn.disabled = true;
+    caraDownloadBtn.disabled = true;
+    caraNameInput.disabled = true;
+    caraSaveStatus.hidden = false;
+    caraSaveStatus.dataset.error = 'false';
+    caraSaveStatus.textContent = 'guardando...';
+
+    var initialPos = pickCaraInitialPosition();
+    FaceStore.save(caraNameInput.value, pendingFaceCapture, initialPos, 'png').then(function (saved) {
+      caraSaveStatus.textContent = 'guardada';
+      updateKnownCaraPosition(saved.id, saved.x, saved.y);
+      addCaraTile(saved);
+      setTimeout(function () {
+        caraSaveBtn.disabled = false;
+        caraDownloadBtn.disabled = false;
+        caraNameInput.disabled = false;
+        caraSaveStatus.hidden = true;
+        closeCaraConfirm();
+      }, 450);
+    }).catch(function () {
+      caraSaveBtn.disabled = false;
+      caraDownloadBtn.disabled = false;
+      caraNameInput.disabled = false;
+      caraSaveStatus.dataset.error = 'true';
+      caraSaveStatus.textContent = 'no se pudo guardar — revisá tu conexión e intentá de nuevo.';
+    });
+  });
+
+  if (FaceStore) {
+    FaceStore.list().then(function (faces) {
+      faces.forEach(function (f) {
+        var hasPosition = typeof f.x === 'number' && typeof f.y === 'number';
+        var pos = hasPosition
+          ? { x: f.x, y: f.y, rotation: f.rotation || 0, scale: f.scale || 1 }
+          : pickCaraInitialPosition();
+        if (!hasPosition) FaceStore.updatePosition(f.id, pos).catch(function () {});
+        updateKnownCaraPosition(f.id, pos.x, pos.y);
+        addCaraTile({ id: f.id, name: f.name, image: f.image, x: pos.x, y: pos.y, rotation: pos.rotation, scale: pos.scale });
+      });
+    }).catch(function () {});
+
+    FaceStore.subscribePositions(function (row) {
+      if (!row || !row.id) return;
+      updateKnownCaraPosition(row.id, row.x, row.y);
+      var tile = carasCollection.querySelector('[data-face-id="' + row.id + '"]');
+      if (!tile || tile.classList.contains('is-dragging')) return;
+      tile.classList.add('is-remote-moving');
+      tile.style.setProperty('--pos-x', row.x + '%');
+      tile.style.setProperty('--pos-y', row.y + '%');
+      setTimeout(function () { tile.classList.remove('is-remote-moving'); }, 450);
+    });
+  }
 
   // ---------- modo dev: ?dev=1 — sliders para calibrar top/left/width
   // de cada capa a ojo, y un botón para copiar los valores finales ----------

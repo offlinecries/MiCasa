@@ -98,3 +98,75 @@ begin
 exception when duplicate_object then
   null; -- ya estaba agregada a la publicación, no hay nada más que hacer
 end $$;
+
+-- ============================================================
+-- Mi Casa — "Armá tu cara" (galería de caras guardadas)
+-- Misma idea que "dejá tu foto" de arriba, pero en su propio bucket y
+-- tabla (visitor-faces / visitor_faces) para no mezclar las fotos de
+-- cámara con las caras armadas. Seguro de correr de nuevo.
+-- ============================================================
+
+insert into storage.buckets (id, name, public)
+values ('visitor-faces', 'visitor-faces', true)
+on conflict (id) do nothing;
+
+create table if not exists public.visitor_faces (
+  id uuid primary key default gen_random_uuid(),
+  filename text not null,
+  image_url text not null,
+  created_at timestamptz not null default now(),
+  x double precision,
+  y double precision,
+  rotation double precision,
+  scale double precision
+);
+
+alter table public.visitor_faces enable row level security;
+
+drop policy if exists visitor_faces_select_anon on public.visitor_faces;
+create policy visitor_faces_select_anon
+  on public.visitor_faces
+  for select
+  to anon
+  using (true);
+
+drop policy if exists visitor_faces_insert_anon on public.visitor_faces;
+create policy visitor_faces_insert_anon
+  on public.visitor_faces
+  for insert
+  to anon
+  with check (true);
+
+drop policy if exists visitor_faces_update_position_anon on public.visitor_faces;
+create policy visitor_faces_update_position_anon
+  on public.visitor_faces
+  for update
+  to anon
+  using (true)
+  with check (true);
+
+revoke update on public.visitor_faces from anon;
+grant update (x, y, rotation, scale) on public.visitor_faces to anon;
+
+-- sin policies de delete (tampoco acá se puede borrar nada desde la web pública)
+
+drop policy if exists visitor_faces_bucket_read on storage.objects;
+create policy visitor_faces_bucket_read
+  on storage.objects
+  for select
+  to anon
+  using (bucket_id = 'visitor-faces');
+
+drop policy if exists visitor_faces_bucket_insert on storage.objects;
+create policy visitor_faces_bucket_insert
+  on storage.objects
+  for insert
+  to anon
+  with check (bucket_id = 'visitor-faces');
+
+do $$
+begin
+  alter publication supabase_realtime add table public.visitor_faces;
+exception when duplicate_object then
+  null;
+end $$;
