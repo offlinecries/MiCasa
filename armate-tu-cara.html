@@ -7,6 +7,8 @@
 <link rel="stylesheet" href="style.css">
 <style>
 
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tibetan&display=swap');
+
   :root { --room-paper: #D6D6D6; }
 
   html, body { margin: 0; min-height: 100%; }
@@ -112,6 +114,7 @@
     cursor: inherit;
   }
   .toolbar button:active { background: rgba(0,0,0,0.5); }
+  .toolbar button .orn { font-family: 'Noto Sans Tibetan', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; }
 
   /* ---------- escena de escritorio: mueble + espejo tal cual el fondo ---------- */
   .scene-wrap { width: min(100%, 1150px); margin: 0 auto; }
@@ -562,9 +565,9 @@
   <div class="room-subtitle">elegí de arriba hacia abajo: cabeza, cejas, ojos, nariz, boca — se arma sola en el espejo</div>
 
   <div class="toolbar">
-    <button id="btnRandom" type="button">[ aleatorizar ]</button>
-    <button id="btnReset" type="button">[ reset ]</button>
-    <button id="btnCapture" type="button">[ sacar foto ]</button>
+    <button id="btnRandom" type="button"><span class="orn">༺</span> aleatorizar <span class="orn">༻</span></button>
+    <button id="btnReset" type="button"><span class="orn">༺</span> reset <span class="orn">༻</span></button>
+    <button id="btnCapture" type="button"><span class="orn">༺</span> sacar foto <span class="orn">༻</span></button>
   </div>
 
   <!-- ---------- desktop / tablet: mueble + espejo completos ---------- -->
