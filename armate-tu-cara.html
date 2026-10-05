@@ -349,21 +349,22 @@
   .caras-section {
     position: relative;
     z-index: 2;
-    background: #cac8c0;
-    padding: 8vh 6vw 10vh 6vw;
+    padding: 2vh 0 0 0;
     margin-top: 6vh;
+    border-top: 1px solid var(--frame-gold);
   }
   .caras-title {
     font-family: 'Cardinal', serif;
     font-size: 2rem;
-    color: var(--ink);
-    opacity: 0.9;
+    color: var(--frame-ink);
+    text-shadow: 0 0 22px rgba(201,168,118,0.3);
+    opacity: 0.95;
     text-align: center;
   }
   .caras-hint {
     font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
     font-size: 0.68rem;
-    color: var(--mist);
+    color: var(--frame-mist);
     letter-spacing: 0.02em;
     text-align: center;
     margin: 8px 0 5vh 0;
@@ -434,7 +435,7 @@
   }
 
   @media (max-width: 720px) {
-    .caras-section { padding: 6vh 6vw 9vh 6vw; }
+    .caras-section { padding: 2vh 0 0 0; }
     .caras-title { font-size: 1.7rem; }
     .caras-collection { min-height: 56vh; }
     .cara-window { width: 62%; }
@@ -558,6 +559,10 @@
     <img src="assets/iconos/ventana-vieja-trabajo.png" alt="">
     <span class="umbral-label">trabajo</span>
   </a>
+  <a href="sala-de-juegos.html" class="umbral" aria-label="ir a Sala de juegos">
+    <img src="assets/fin.png" alt="">
+    <span class="umbral-label">sala de juegos</span>
+  </a>
 </div>
 
 <div class="room-wrap">
@@ -603,15 +608,15 @@
   </div>
 
   <div class="rows-mobile" id="rowsMobile"></div>
-</div>
 
-<section class="caras-section">
-  <div class="caras-title">caras guardadas</div>
-  <div class="caras-hint">las caras de todas las visitas, una al lado de la otra — arrastralas como quieras</div>
-  <div class="caras-collection" id="carasCollection">
-    <div class="caras-empty" id="carasEmpty">todavía no hay ninguna — armá la tuya y guardala</div>
-  </div>
-</section>
+  <section class="caras-section">
+    <div class="caras-title">caras guardadas</div>
+    <div class="caras-hint">las caras de todas las visitas, una al lado de la otra — arrastralas como quieras</div>
+    <div class="caras-collection" id="carasCollection">
+      <div class="caras-empty" id="carasEmpty">todavía no hay ninguna — armá la tuya y guardala</div>
+    </div>
+  </section>
+</div>
 
 <div class="cara-confirm" id="caraConfirm" hidden>
   <div class="cara-confirm-window">
