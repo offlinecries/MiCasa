@@ -57,46 +57,9 @@
   .umbral:hover img { transform: scale(1.1); opacity: 1; }
 
   /* ---------- armá tu cara: todo el juego adentro de un recuadro
-     estilo ventana de diálogo de videojuego (doble línea dorada,
-     interior oscuro con viñeta) ---------- */
-  .room-wrap {
-    position: relative;
-    z-index: 5;
-    width: min(96vw, 1520px);
-    margin: 9vh auto 10vh auto;
-    padding: 7vh 7vw 7vh 7vw;
-    --frame-ink: #EADBB8;
-    --frame-mist: #B6A077;
-    --frame-gold: #8A6B3E;
-    --frame-bg: #110E0B;
-    background:
-      radial-gradient(ellipse 70% 45% at 50% 0%, rgba(138,107,62,0.16), transparent 65%),
-      linear-gradient(180deg, #1A1511 0%, #110E0B 55%, #0A0908 100%);
-    border: 1px solid var(--frame-gold);
-    outline: 1px solid var(--frame-gold);
-    outline-offset: 7px;
-    box-shadow: 0 24px 60px rgba(8,6,4,0.4), inset 0 0 110px rgba(0,0,0,0.55);
-  }
-
-  .room-title {
-    font-family: 'Cardinal', serif;
-    font-size: 3rem;
-    color: var(--frame-ink);
-    text-shadow: 0 0 22px rgba(201,168,118,0.3);
-    opacity: 0.95;
-    text-align: center;
-    margin: 0 9vw 0.5vh 9vw;
-  }
-
-  .room-subtitle {
-    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
-    font-size: 0.72rem;
-    color: var(--frame-mist);
-    letter-spacing: 0.02em;
-    text-align: center;
-    margin: 0 9vw 3.5vh 9vw;
-  }
-
+     estilo ventana de diálogo de videojuego ----------
+     .room-wrap / .room-title / .room-subtitle (el recuadro oscuro en
+     sí) ahora viven en style.css, compartidos con sala-de-juegos.html */
   .toolbar {
     display: flex;
     justify-content: center;
@@ -246,10 +209,6 @@
     }
     .umbral img { height: 40px; filter: drop-shadow(0 4px 5px rgba(0,0,0,0.55)) drop-shadow(0 0 7px rgba(0,0,0,0.4)); }
     .umbral-label { font-size: 0.86rem; opacity: 1; color: #1C1C1A; background: rgba(238,232,220,0.88); padding: 2px 7px; border-radius: 2px; }
-
-    .room-wrap { width: 100%; margin: 0 0 8vh 0; padding: 8vh 0 20vh 0; outline-offset: -1px; }
-    .room-title { font-size: 2.1rem; margin: 0 6vw 0.5vh 6vw; }
-    .room-subtitle { margin: 0 6vw 3vh 6vw; }
 
     .scene-wrap { display: none; }
 

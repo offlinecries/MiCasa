@@ -7,19 +7,10 @@
 <link rel="stylesheet" href="style.css">
 <style>
 
-  :root {
-    --room-paper: #D6D6D6;
-    --room-paper-deep: #C6C6C6;
-  }
+  :root { --room-paper: #D6D6D6; }
 
-  html, body {
-    margin: 0;
-    min-height: 100%;
-  }
-
-  body {
-    background: var(--room-paper);
-  }
+  html, body { margin: 0; min-height: 100%; }
+  body { background: var(--room-paper); }
 
   .grain {
     position: fixed;
@@ -56,7 +47,7 @@
     color: var(--ink);
     text-decoration: none;
     opacity: 0.82;
-    z-index: 10;
+    z-index: 30;
   }
   .home-anchor:hover { opacity: 1; text-decoration: none; }
 
@@ -65,7 +56,7 @@
     top: 50%;
     transform: translateY(-50%);
     right: 4vw;
-    z-index: 10;
+    z-index: 30;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -80,70 +71,129 @@
   .umbral-label { font-family: 'Cardinal', serif; font-size: 1rem; color: var(--ink); opacity: 0.75; }
   .umbral:hover img { transform: scale(1.1); opacity: 1; }
 
-  /* ---------- sala de juegos ---------- */
-  .juegos-wrap {
+  /* ---------- sala de juegos: título grande + menú vertical tipo
+     pantalla de título de videojuego retro — el recuadro oscuro en sí
+     (.room-wrap / .room-title / .room-subtitle) vive en style.css,
+     compartido con armate-tu-cara.html. Acá solo lo que es propio de
+     esta página ---------- */
+  .juegos-section {
     position: relative;
     z-index: 5;
-    min-height: 100vh;
+    padding: 6vh 0;
+  }
+
+  .room-title--juegos {
+    font-size: clamp(3.5rem, 9vw, 8rem);
+    text-shadow: 0 0 40px rgba(201,168,118,0.35);
+    line-height: 1.05;
+    margin-bottom: 1.5vh;
+  }
+
+  .room-corner {
+    position: absolute;
+    color: var(--frame-gold);
+    font-size: 0.9rem;
+    opacity: 0.8;
+    pointer-events: none;
+  }
+  .room-corner--tl { top: 14px; left: 14px; }
+  .room-corner--tr { top: 14px; right: 14px; }
+  .room-corner--bl { bottom: 14px; left: 14px; }
+  .room-corner--br { bottom: 14px; right: 14px; }
+
+  .room-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: min(80%, 420px);
+    margin: 0 auto 5vh auto;
+  }
+  .room-divider-line { flex: 1; height: 1px; background: var(--frame-gold); opacity: 0.6; }
+  .room-divider-dot { color: var(--frame-gold); font-size: 0.8rem; line-height: 1; }
+
+  /* ---------- menú vertical ---------- */
+  .game-menu {
+    width: min(86%, 560px);
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    padding: 12vh 0 8vh 0;
+    gap: 3.4vh;
   }
 
-  .room-title {
-    font-family: 'Cardinal', serif;
-    font-size: 3rem;
-    color: var(--ink);
-    opacity: 0.88;
-    margin: 0 9vw 1vh 9vw;
-  }
-
-  .room-subtitle {
-    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
-    font-size: 0.78rem;
-    color: var(--mist);
-    letter-spacing: 0.02em;
-    margin: 0 9vw 6vh 9vw;
-  }
-
-  .games-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 28px;
-    padding: 0 9vw 40px 9vw;
-  }
-
-  .game-tile {
-    width: 190px;
-    text-align: left;
-    background: none;
-    border: 1px dashed rgba(28,28,26,0.35);
-    padding: 16px;
-    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
-    color: var(--ink);
+  .game-item {
     cursor: inherit;
-    transition: background 0.2s ease, transform 0.2s ease;
+    outline: none;
+    padding: 4px 2px;
   }
-  .game-tile:hover { background: rgba(28,28,26,0.05); transform: translateY(-3px); }
 
-  .game-tile-index {
+  .game-item-row {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+
+  .game-item-arrow {
+    flex: 0 0 auto;
+    width: 1.1em;
+    color: var(--frame-ink);
+    font-size: 0.9rem;
+    opacity: 0;
+  }
+  .game-item.is-selected .game-item-arrow {
+    opacity: 1;
+    animation: game-arrow-blink 1.4s ease-in-out infinite;
+  }
+  @keyframes game-arrow-blink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.25; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .game-item-arrow { animation: none !important; }
+  }
+
+  .game-item-number {
+    flex: 0 0 auto;
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
     font-size: 0.78rem;
-    color: var(--mist);
-    margin-bottom: 10px;
-  }
-  .game-tile-title {
-    font-size: 1.05rem;
-    letter-spacing: 0.02em;
-  }
-  .game-tile-hint {
-    font-size: 0.68rem;
-    color: var(--mist);
-    margin-top: 10px;
-    opacity: 0.8;
+    color: var(--frame-mist);
   }
 
-  /* ---------- ventana flotante estilo app vieja ---------- */
+  .game-item-name {
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: 0.02em;
+    color: var(--frame-mist);
+    border-bottom: 1px solid transparent;
+    padding-bottom: 4px;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+  .game-item.is-selected .game-item-name {
+    color: var(--frame-ink);
+    border-bottom-color: var(--frame-gold);
+  }
+
+  .game-item-hint {
+    display: none;
+    margin: 6px 0 0 calc(1.1em + 14px);
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    font-size: 0.68rem;
+    color: var(--frame-mist);
+    opacity: 0.75;
+  }
+  .game-item.is-selected .game-item-hint { display: block; }
+
+  .room-keys-hint {
+    margin-top: 6vh;
+    text-align: center;
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    font-size: 0.64rem;
+    letter-spacing: 0.04em;
+    color: var(--frame-mist);
+    opacity: 0.5;
+  }
+
+  /* ---------- ventana flotante estilo app vieja (CAMERA.EXE) ---------- */
   .game-window {
     position: fixed;
     top: 16vh;
@@ -255,9 +305,11 @@
       padding: 2px 7px;
       border-radius: 2px;
     }
-    .room-title { font-size: 2.1rem; margin: 0 6vw 1vh 6vw; }
-    .room-subtitle { margin: 0 6vw 4vh 6vw; }
-    .games-grid { padding: 0 6vw 30px 6vw; gap: 20px; }
+
+    .game-menu { width: 92%; gap: 4vh; }
+    .game-item { padding: 10px 2px; }
+    .game-item-name { font-size: 1.15rem; }
+    .room-keys-hint { display: none; }
     .game-window { top: 10vh; width: calc(100vw - 32px); }
   }
 
@@ -329,24 +381,27 @@
   </a>
 </div>
 
-<div class="juegos-wrap">
-  <div class="room-title">sala de juegos</div>
-  <div class="room-subtitle">experimentos / mini juegos</div>
+<section class="juegos-section">
+  <div class="room-wrap">
+    <span class="room-corner room-corner--tl" aria-hidden="true">✦</span>
+    <span class="room-corner room-corner--tr" aria-hidden="true">✦</span>
+    <span class="room-corner room-corner--bl" aria-hidden="true">✦</span>
+    <span class="room-corner room-corner--br" aria-hidden="true">✦</span>
 
-  <div class="games-grid">
-    <button class="game-tile" id="openCamera" type="button">
-      <div class="game-tile-index">(01)</div>
-      <div class="game-tile-title">CÁMARA</div>
-      <div class="game-tile-hint">click para abrir CAMERA.EXE</div>
-    </button>
+    <div class="room-title room-title--juegos">Sala de Juegos</div>
+    <div class="room-subtitle">experimentos / mini juegos</div>
 
-    <a class="game-tile" href="armate-tu-cara.html">
-      <div class="game-tile-index">(02)</div>
-      <div class="game-tile-title">ARMÁ TU CARA</div>
-      <div class="game-tile-hint">click para entrar al baño</div>
-    </a>
+    <div class="room-divider" aria-hidden="true">
+      <span class="room-divider-line"></span>
+      <span class="room-divider-dot">◆</span>
+      <span class="room-divider-line"></span>
+    </div>
+
+    <div class="game-menu" id="gameMenu" role="listbox" aria-label="Elegir juego"></div>
+
+    <div class="room-keys-hint">↑ ↓ elegir&nbsp;&nbsp;&nbsp;&nbsp;enter jugar</div>
   </div>
-</div>
+</section>
 
 <!-- ventana flotante de la cámara -->
 <div class="game-window" id="cameraWindow" hidden>
@@ -376,8 +431,119 @@
 
 <script src="assets/js/camera-fx.js"></script>
 <script>
+  // ---------- menú de juegos: un array simple para poder sumar
+  // experimentos nuevos sin tocar el resto (número, nombre, hint y
+  // adónde va: href para navegar, action para algo manejado acá) ----------
+  var GAMES = [
+    { number: '01', name: 'CÁMARA', hint: 'click para abrir CAMERA.EXE', action: 'camera' },
+    { number: '02', name: 'ARMÁ TU CARA', hint: 'click para entrar al baño', href: 'armate-tu-cara.html' }
+  ];
+
   (function () {
-    var openBtn = document.getElementById('openCamera');
+    var menuEl = document.getElementById('gameMenu');
+    var selectedIndex = 0;
+
+    function buildMenu() {
+      GAMES.forEach(function (g, i) {
+        var item = document.createElement('div');
+        item.className = 'game-item';
+        item.setAttribute('role', 'option');
+        item.tabIndex = 0;
+
+        var row = document.createElement('div');
+        row.className = 'game-item-row';
+
+        var arrow = document.createElement('span');
+        arrow.className = 'game-item-arrow';
+        arrow.setAttribute('aria-hidden', 'true');
+        arrow.textContent = '▶';
+
+        var number = document.createElement('span');
+        number.className = 'game-item-number';
+        number.textContent = '(' + g.number + ')';
+
+        var name = document.createElement('span');
+        name.className = 'game-item-name';
+        name.textContent = g.name;
+
+        row.appendChild(arrow);
+        row.appendChild(number);
+        row.appendChild(name);
+
+        var hint = document.createElement('div');
+        hint.className = 'game-item-hint';
+        hint.textContent = g.hint;
+
+        item.appendChild(row);
+        item.appendChild(hint);
+
+        item.addEventListener('mouseenter', function () { setSelected(i); });
+        item.addEventListener('focus', function () { setSelected(i); });
+        item.addEventListener('click', function () { runGame(i); });
+
+        menuEl.appendChild(item);
+      });
+      updateSelection();
+    }
+
+    function setSelected(i) {
+      selectedIndex = i;
+      updateSelection();
+    }
+
+    function updateSelection() {
+      var items = menuEl.querySelectorAll('.game-item');
+      items.forEach(function (item, i) {
+        var sel = i === selectedIndex;
+        item.classList.toggle('is-selected', sel);
+        item.setAttribute('aria-selected', sel ? 'true' : 'false');
+      });
+    }
+
+    function focusSelected() {
+      var items = menuEl.querySelectorAll('.game-item');
+      if (items[selectedIndex]) items[selectedIndex].focus();
+    }
+
+    function runGame(i) {
+      var g = GAMES[i];
+      if (!g) return;
+      if (g.href) {
+        window.location.href = g.href;
+      } else if (g.action === 'camera') {
+        openWindow();
+      }
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelected(Math.min(selectedIndex + 1, GAMES.length - 1));
+        focusSelected();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelected(Math.max(selectedIndex - 1, 0));
+        focusSelected();
+      } else if (e.key === 'Enter') {
+        // si el foco está en un elemento interactivo propio (ej. un
+        // botón de la ventana de la cámara), dejá que ese elemento
+        // maneje su propio Enter en vez de relanzar el juego
+        if (document.activeElement && document.activeElement.closest('.game-window')) return;
+        e.preventDefault();
+        runGame(selectedIndex);
+      }
+    });
+
+    buildMenu();
+  })();
+
+  // ---------- ventana flotante CAMERA.EXE — misma lógica de siempre,
+  // ahora invocada desde el menú (runGame, arriba) en vez de un botón
+  // suelto. "var" a nivel de archivo para que el closure de runGame
+  // vea el valor que se le asigna más abajo, sin importar el orden de
+  // ejecución de los dos IIFE ----------
+  var openWindow;
+  (function () {
     var win = document.getElementById('cameraWindow');
     var titlebar = document.getElementById('winTitlebar');
     var winBody = document.getElementById('winBody');
@@ -447,13 +613,11 @@
       caption.hidden = true;
     }
 
-    function openWindow() {
+    openWindow = function () {
       win.hidden = false;
       minimized = false;
       winBody.dataset.collapsed = 'false';
-    }
-
-    openBtn.addEventListener('click', openWindow);
+    };
 
     closeBtn.addEventListener('click', function () {
       stopCamera();
