@@ -356,18 +356,17 @@
   --tv-screen-height: 60.4%;
 }
 
-.tv-video {
+.tv-video-wrap {
   position: absolute;
   top: var(--tv-screen-top);
   left: var(--tv-screen-left);
   width: var(--tv-screen-width);
   height: var(--tv-screen-height);
-  object-fit: cover;
+  overflow: hidden;
   z-index: 1;
-  display: block;
-  /* placeholder mientras no hay <source>: estática sutil + brillo tibio
-     de "tele prendida" — un video real y opaco la tapa solo, no hace
-     falta sacar nada de acá cuando se agregue */
+  /* placeholder/fondo visible mientras el iframe de Vimeo carga (o si
+     tarda en bufferear): estática sutil + brillo tibio de "tele
+     prendida" — el video, una vez reproduciendo, la tapa solo */
   background-color: #0b0c09;
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
@@ -375,6 +374,22 @@
   background-size: 120px 120px, 100% 100%;
   background-blend-mode: overlay, normal;
   animation: tv-static-shift 1.1s steps(6) infinite, tv-static-flicker 3.6s ease-in-out infinite;
+}
+/* el video de Vimeo es 4:3 (1.333:1) y la pantalla recortada del marco
+   es más ancha, ~1.446:1 (65.5% / 60.4% de un contenedor 4:3) — para
+   que la "tele" se vea llena sin estirar el video, el iframe mantiene
+   su propio 4:3 a lo ancho (100%) y se agranda en alto lo necesario
+   para cubrir (100% * 1.446/1.333 ≈ 108.44%), centrado y recortado por
+   el overflow:hidden del contenedor de arriba */
+.tv-video-embed {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 108.44%;
+  transform: translate(-50%, -50%);
+  border: 0;
+  display: block;
 }
 @keyframes tv-static-shift {
   0%   { background-position: 0 0, 0 0; }

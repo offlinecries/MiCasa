@@ -65,11 +65,15 @@
 
 <section class="tv-mi-casa">
   <div class="tv-wrap">
-    <!-- REEMPLAZAR: acá va el embed de Vimeo (o el <source> de un archivo
-         local). Mientras no haya nada, el fondo/estática animada de
-         .tv-video actúa como placeholder y el <video> vacío no tapa nada. -->
-    <video class="tv-video" autoplay muted loop playsinline preload="metadata" aria-hidden="true">
-    </video>
+    <div class="tv-video-wrap">
+      <iframe
+        class="tv-video-embed"
+        src="https://player.vimeo.com/video/1232881889?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479&amp;autoplay=1&amp;muted=1&amp;loop=1&amp;background=1"
+        frameborder="0"
+        allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+        referrerpolicy="strict-origin-when-cross-origin"
+        title="programación tv — mi casa"></iframe>
+    </div>
     <img class="tv-frame" src="assets/tv mi casa.png" alt="" draggable="false">
   </div>
 </section>
