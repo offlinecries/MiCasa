@@ -332,6 +332,75 @@
   .pasillo-room-label { font-size: 0.92rem; }
 }
 
+/* ---------- tv mi casa ---------- */
+/* mismo fondo/ritmo vertical que el pasillo de arriba, para que se
+   sienta la misma pared — ver abajo las variables --tv-screen-* con
+   el área transparente de la pantalla, detectada analizando el PNG
+   (assets/tv mi casa.png, 2000x1500) por flood-fill del canal alfa */
+.tv-mi-casa {
+  position: relative;
+  z-index: 2;
+  background: var(--home-gray);
+  padding: 6vh 6vw 8vh 6vw;
+  display: flex;
+  justify-content: center;
+}
+
+.tv-wrap {
+  position: relative;
+  width: min(900px, 100%);
+  aspect-ratio: 2000 / 1500;
+  --tv-screen-top: 16%;
+  --tv-screen-left: 17.4%;
+  --tv-screen-width: 65.5%;
+  --tv-screen-height: 60.4%;
+}
+
+.tv-video {
+  position: absolute;
+  top: var(--tv-screen-top);
+  left: var(--tv-screen-left);
+  width: var(--tv-screen-width);
+  height: var(--tv-screen-height);
+  object-fit: cover;
+  z-index: 1;
+  display: block;
+  /* placeholder mientras no hay <source>: estática sutil + brillo tibio
+     de "tele prendida" — un video real y opaco la tapa solo, no hace
+     falta sacar nada de acá cuando se agregue */
+  background-color: #0b0c09;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse 75% 65% at 50% 45%, rgba(130,150,160,0.25), rgba(8,9,7,0.95) 72%);
+  background-size: 120px 120px, 100% 100%;
+  background-blend-mode: overlay, normal;
+  animation: tv-static-shift 1.1s steps(6) infinite, tv-static-flicker 3.6s ease-in-out infinite;
+}
+@keyframes tv-static-shift {
+  0%   { background-position: 0 0, 0 0; }
+  100% { background-position: 480px 240px, 0 0; }
+}
+@keyframes tv-static-flicker {
+  0%, 100% { opacity: 0.9; }
+  48%      { opacity: 1; }
+  55%      { opacity: 0.78; }
+  78%      { opacity: 0.95; }
+}
+
+.tv-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  display: block;
+}
+
+@media (max-width: 720px) {
+  .tv-mi-casa { padding: 4vh 5vw 6vh 5vw; }
+}
+
 /* ---------- dejá tu foto ---------- */
 .deja-tu-foto {
   position: relative;
