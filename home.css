@@ -167,33 +167,6 @@
   .costura-deco { width: 34vw; max-width: 190px; }
 }
 
-/* entrada discreta a la sala de juegos — texto chico, no un hotspot
-   ilustrado, para no tener que dibujar un ícono nuevo para esto */
-.juegos-link {
-  position: fixed;
-  bottom: 18px;
-  right: 22px;
-  z-index: 7;
-  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.03em;
-  color: #1C1C1A;
-  opacity: 0.55;
-  text-decoration: none;
-  cursor: inherit;
-  transition: opacity 0.2s ease;
-}
-.juegos-link:hover { opacity: 1; }
-.juegos-arrow {
-  display: inline-block;
-  transition: translate var(--dur-fast) var(--ease-out);
-}
-.juegos-link:hover .juegos-arrow { translate: 3px -3px; }
-
-@media (max-width: 820px) {
-  .juegos-link { bottom: 12px; right: 12px; font-size: 0.66rem; }
-}
-
 /* frases escritas a mano, desparramadas por la pared — se van "dibujando"
    al entrar y después tiemblan suave como si la mano no estuviera del
    todo quieta */
